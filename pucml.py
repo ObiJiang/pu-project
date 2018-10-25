@@ -11,6 +11,7 @@ class PUCML_Base():
         self.gamma = config.gamma # disconted learning rate
         self.batch_size = config.batch_size
         self.n_unlabeled = config.n_unlabeled
+        self.n_subsample_pairs = config.n_subsample_pairs
 
         # dataset parameter
         self.n_users = config.n_users
@@ -26,14 +27,24 @@ class PUCML_Base():
         self.train_user_item_pairs = np.asarray(train_user_item_matrix.nonzero()).T
         self.train_user_to_positive_set = {u: set(row) for u, row in enumerate(train_user_item_matrix.rows)}
 
+        """ The following are variables used in the model (feature vectors and alpha) """
         # how feature vectors are generated
         if features is not None:
             self.features = tf.constant(features, dtype=tf.float32)
         else:
             # will be changed to random initialization later (done)
-            self.emb_dim = 100
-            self.features = tf.Variable(tf.random_normal([self.n_items, self.embed_dim],
-                                            stddev=1 / (self.embed_dim ** 0.5), dtype=tf.float32))
+            self.emb_dim = 30
+            self.features = tf.Variable(tf.random_normal([self.n_items, self.emb_dim],
+                                            stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
+
+        # subsample base item pairs. It is extremly rare that two items would be the same. If it is the same, it's not a big deal
+        vi = tf.constant(np.random.randint(0,self.n_items,size=(self.n_subsample_pairs)),dtype=tf.int32)
+        vj = tf.constant(np.random.randint(0,self.n_items,size=(self.n_subsample_pairs)),dtype=tf.int32)
+        self.base_matrices = tf.matmul(tf.expand_dims(tf.gather(self.features,vi),2),
+                                       tf.expand_dims(tf.gather(self.features,vj),1)) #(batch,emb_dim,emb_dim)
+        # generate alpha for all the users
+        self.alpha = tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
+                                        stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32))
 
         self._model()
 
@@ -53,14 +64,12 @@ class PUCML_Base():
         return example,unlabeled_samples
 
     def _generate_unlabeled_samples(self,example):
+        # TO DO: check
         return np.random.randint(0,self.n_items,size=(self.n_unlabeled))
 
     def prior_estimation(self):
         # placeholder value 0.5
         return 0.5
-
-    def sample_base_item_pairs(self):
-        pass
 
     def _model(self):
         train_iterator,train_dataset = self.input_dataset_pipeline()
@@ -70,7 +79,11 @@ class PUCML_Base():
 
         p,u = iterator.get_next()
 
-        
+        with tf.Session() as sess:
+            train_handle = sess.run(train_iterator.string_handle())
+            sess.run(train_iterator.initializer)
+            sess.run(tf.global_variables_initializer())
+            print(sess.run(self.base_matrices,feed_dict = {handle: train_handle}).shape)
         # compute nearest neigbors
 
         # compute score functions
@@ -90,7 +103,10 @@ def main_algo(config):
     config.n_users = n_users
     config.n_items = n_items
 
-    pucml_learner = PUCML_Base(config,features=dense_features,train=train,valid=valid,test=test)
+    # without feature vectors
+    pucml_learner = PUCML_Base(config,features=None,train=train,valid=valid,test=test)
+    # with feature vectors
+    #ucml_learner = PUCML_Base(config,features=dense_features,train=train,valid=valid,test=test)
     # O,U = batch
     # while True:
     #     pass
@@ -125,6 +141,13 @@ if __name__ == '__main__':
         type     = int,
         default  = 20,
         help     = 'number of unlabeled data')
+
+    parser.add_argument('--n_subsample_pairs',
+        action   = 'store',
+        required = False,
+        type     = int,
+        default  = 100,
+        help     = 'number of base subsample pairs')
 
     config = parser.parse_args()
     main_algo(config)
