@@ -66,7 +66,6 @@ def split_data(user_item_matrix, split_ratio=(3, 1, 1), seed=1):
 
             train_count = int(len(items) * split_ratio[0] / sum(split_ratio))
             valid_count = int(len(items) * split_ratio[1] / sum(split_ratio))
-
             for i in items[0: train_count]:
                 train[user, i] = 1
             for i in items[train_count: train_count + valid_count]:
