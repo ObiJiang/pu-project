@@ -27,7 +27,8 @@ class PUCML_Base():
         train_user_item_matrix = lil_matrix(self.train)
         self.train_user_item_pairs = np.asarray(train_user_item_matrix.nonzero()).T
         self.train_user_to_positive_set = {u: set(row) for u, row in enumerate(train_user_item_matrix.rows)}
-
+        for u, row in enumerate(train_user_item_matrix.rows)
+            print(len(row))
         self.create_varaibles(features)
         self.model()
 
