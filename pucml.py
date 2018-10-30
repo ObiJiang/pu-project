@@ -253,7 +253,6 @@ def main_algo(config):
     dense_features = features.toarray() + 1E-10
 
     if config.with_feature:
-        # TO DO: JL -> 3000 dim, PCA -> whatever
         """ Random Projection based JL lemma """
         jl_dim = 2000
         ori_dim = dense_features.shape[1]
