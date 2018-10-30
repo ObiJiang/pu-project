@@ -7,6 +7,10 @@ import toolz
 import argparse
 from tqdm import tqdm
 
+""" Import PCA-related stuff from sklearn """
+from sklearn.preprocessing import StandardScaler
+from sklearn.decomposition import PCA
+
 class PUCML_Base():
     def __init__(self,config,features=None,train=None,valid=None,test=None):
         # hyper-parameter
@@ -236,7 +240,6 @@ class PUCML_Base():
                 for _ in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
                     _, loss = sess.run((model.selctive_opt, model.total_loss),
                                        feed_dict = {model.handle: train_handle})
-
                     losses.append(loss)
 
                 print("\nTraining loss {}".format(np.mean(losses)))
@@ -249,7 +252,28 @@ def main_algo(config):
     # make feature as dense matrix
     dense_features = features.toarray() + 1E-10
 
-    # TO DO: JL -> 3000 dim, PCA ->
+    if config.with_feature:
+        # TO DO: JL -> 3000 dim, PCA -> whatever
+        """ Random Projection based JL lemma """
+        jl_dim = 2000
+        ori_dim = dense_features.shape[1]
+        random_matrix = np.random.normal(size=(ori_dim, jl_dim))
+
+        jl_projected_fea = dense_features @ random_matrix
+
+        """ PCA """
+        scaler = StandardScaler()
+        scaler.fit(jl_projected_fea)
+        jl_projected_fea = scaler.transform(jl_projected_fea)
+
+        pca = PCA(.8)
+        pca.fit(jl_projected_fea)
+        pca_projected_fea = pca.transform(jl_projected_fea)
+
+        print(pca_projected_fea.shape)
+        fea = pca_projected_fea
+    else:
+        fea = None
 
     # get train/valid/test user-item matrices
     train, valid, test = split_data(user_item_matrix)
@@ -259,8 +283,9 @@ def main_algo(config):
     config.n_items = n_items
 
     # without feature vectors
-    pucml_learner = PUCML_Base(config,features=None,train=train,valid=valid,test=test)
+    pucml_learner = PUCML_Base(config,features=fea,train=train,valid=valid,test=test)
     pucml_learner.train_main()
+
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
@@ -313,6 +338,13 @@ if __name__ == '__main__':
         type     = int,
         default  = 100,
         help     = 'number of base subsample pairs')
+
+    parser.add_argument('--with_feature',
+        action   = 'store',
+        required = False,
+        type     = bool,
+        default  = False,
+        help     = 'Flag to determine whether to use features')
 
     config = parser.parse_args()
     main_algo(config)
