@@ -1,5 +1,5 @@
 import numpy as np
-from misc import citeulike, split_data
+from misc import citeulike, split_data, AttrDict
 from scipy.sparse import lil_matrix
 import tensorflow as tf
 import argparse
@@ -9,10 +9,14 @@ class PUCML_Base():
         # hyper-parameter
         self.beta = config.beta   # tolerance margin
         self.gamma = config.gamma # disconted learning rate
+        self.lr = config.lr
         self.k = config.k
         self.batch_size = config.batch_size
         self.n_unlabeled = config.n_unlabeled
         self.n_subsample_pairs = config.n_subsample_pairs
+
+        # prior
+        self.prior = self.prior_estimation()
 
         # dataset parameter
         self.n_users = config.n_users
@@ -42,7 +46,7 @@ class PUCML_Base():
         self.user_postive_ind_map = tf.constant(user_postive_ind_map_numpy, dtype=tf.int32)
 
         self.create_varaibles(features)
-        self.model()
+        self.model = self.model()
 
     def create_varaibles(self,features):
         """ The following are variables used in the model (feature vectors and alpha) """
@@ -147,16 +151,42 @@ class PUCML_Base():
         unn_dist = tf.concat([unn_dist[:,0:1,:self.k],unn_dist[:,1:,1:]],axis=1)
         unn_dist_sum = tf.reduce_sum(unn_dist,axis=2)
 
-        # compute score functions
+        """ compute score functions """
+        confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
+        # confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
+
+        p_scores = confidence_scores[:,0]
+        u_scores = confidence_scores[:,1:]
+
+        R_p_plus = tf.reduce_mean(1/(1 + tf.exp(p_scores)))
+        R_p_minus = tf.reduce_mean(1/(1 + tf.exp(-1*p_scores)))
+        P_u_minus = tf.reduce_mean(1/(1 + tf.exp(-1*u_scores)))
+
+        """ define loss and optimization """
+        # define two differnt losses and their optimizer
+        total_loss = self.prior * R_p_plus + (P_u_minus - self.prior * R_p_minus)
+        negative_loss = P_u_minus - self.prior * R_p_minus
+
+        full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss)
+        neg_opt = tf.train.AdamOptimizer(learning_rate=self.lr*self.gamma).minimize(-1*negative_loss)
 
         # tf.cond for different optimization
-        with tf.Session() as sess:
+        selctive_opt = tf.cond(negative_loss > self.beta, lambda: full_opt, lambda: neg_opt)
+
+        return AttrDict(locals())  # The magic line.
+
+    def train():
+        model = self.model
+
+        configPro = tf.ConfigProto(allow_soft_placement=True)
+        configPro.gpu_options.allow_growth = True
+
+        with tf.Session(config=configPro) as sess:
+            sess.run(tf.global_variables_initializer())
+            
             train_handle = sess.run(train_iterator.string_handle())
             sess.run(train_iterator.initializer)
-            sess.run(tf.global_variables_initializer())
-            # pnn_dist_out, nonzero_value= sess.run([pnn_dist,nonzero_values],feed_dict = {handle: train_handle})
-            # print(pnn_dist_out.shape,nonzero_value)
-            print(sess.run([pnn_dist_filter,nonnegative_indices,pnn_dist_sum],feed_dict = {handle: train_handle}))
+            sess.run(selctive_opt,feed_dict = {handle: train_handle})
 
 
 
@@ -201,6 +231,13 @@ if __name__ == '__main__':
         type     = float,
         default  = 0.5,
         help     = 'disconted learning rate')
+
+    parser.add_argument('--lr',
+        action   = 'store',
+        required = False,
+        type     = float,
+        default  = 0.001,
+        help     = 'learning rate')
 
     parser.add_argument('--k',
         action   = 'store',

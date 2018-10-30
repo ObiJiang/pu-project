@@ -7,6 +7,10 @@ from tqdm import tqdm
 import pandas
 import os
 
+class AttrDict(dict):
+    __getattr__ = dict.__getitem__
+    __setattr__ = dict.__setitem__
+
 """
 The following code is adapted from https://github.com/changun/CollMetric/blob/master/utils.py.
 """
