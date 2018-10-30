@@ -5,7 +5,6 @@ The following code is adapted from https://github.com/changun/CollMetric/blob/ma
 import tensorflow as tf
 from scipy.sparse import lil_matrix
 
-
 class RecallEvaluator(object):
     def __init__(self, model, train_user_item_matrix, test_user_item_matrix):
         """

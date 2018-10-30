@@ -2,6 +2,7 @@ import numpy as np
 from misc import citeulike, split_data, AttrDict
 from scipy.sparse import lil_matrix
 import tensorflow as tf
+import toolz
 import argparse
 
 class PUCML_Base():
@@ -47,6 +48,7 @@ class PUCML_Base():
 
         self.create_varaibles(features)
         self.model = self.model()
+        self.val_model = self.valuation_model()
 
     def create_varaibles(self,features):
         """ The following are variables used in the model (feature vectors and alpha) """
@@ -175,18 +177,29 @@ class PUCML_Base():
 
         return AttrDict(locals())  # The magic line.
 
+    # return scores for a couple of users
+    def valuation_model(self):
+        score_user_ids = tf.placeholder(tf.int32, [None])
+
+        return AttrDict(locals())
+
     def train():
         model = self.model
+        val_model = self.val_model
 
+        valid_users = numpy.random.choice(list(set(self.valid.nonzero()[0])), size=10, replace=False)
+        print(valid_users)
+        """
         configPro = tf.ConfigProto(allow_soft_placement=True)
         configPro.gpu_options.allow_growth = True
 
         with tf.Session(config=configPro) as sess:
             sess.run(tf.global_variables_initializer())
-            
+
             train_handle = sess.run(train_iterator.string_handle())
             sess.run(train_iterator.initializer)
-            sess.run(selctive_opt,feed_dict = {handle: train_handle})
+            sess.run(selctive_opt,feed_dict = {val_model: train_handle})
+        """
 
 
 
@@ -209,6 +222,7 @@ def main_algo(config):
 
     # without feature vectors
     pucml_learner = PUCML_Base(config,features=None,train=train,valid=valid,test=test)
+    pucml_learner.train()
     # with feature vectors
     #ucml_learner = PUCML_Base(config,features=dense_features,train=train,valid=valid,test=test)
     # O,U = batch
