@@ -1,9 +1,11 @@
 import numpy as np
 from misc import citeulike, split_data, AttrDict
+from evaluator import RecallEvaluator
 from scipy.sparse import lil_matrix
 import tensorflow as tf
 import toolz
 import argparse
+from tqdm import tqdm
 
 class PUCML_Base():
     def __init__(self,config,features=None,train=None,valid=None,test=None):
@@ -31,6 +33,8 @@ class PUCML_Base():
         # preprocess the trainning data
         train_user_item_matrix = lil_matrix(self.train)
         self.train_user_item_pairs = np.asarray(train_user_item_matrix.nonzero()).T
+        self.total_num_user_item = len(self.train_user_item_pairs)
+
         self.train_user_to_positive_set = {u: set(row) for u, row in enumerate(train_user_item_matrix.rows)}
 
         # creat indices map on postive items
@@ -181,27 +185,61 @@ class PUCML_Base():
     def valuation_model(self):
         score_user_ids = tf.placeholder(tf.int32, [None])
 
+        """ find associated metrices with users in score_user_ids """
+        alpha_in_batch = tf.gather(self.alpha,score_user_ids)
+        metrics_in_batch = tf.reduce_sum(tf.expand_dims(tf.expand_dims(alpha_in_batch,2),2) * self.base_matrices,
+                             axis=1)
+
+        """ create anchor vectors for each users """
+        user_postive_ind_map_in_batch = tf.gather(self.user_postive_ind_map,score_user_ids)
+        mask_fea_in_batch = tf.expand_dims(tf.cast(tf.sign(user_postive_ind_map_in_batch + 1),tf.float32),axis=2)
+        fea_in_batch = tf.gather(self.features,tf.nn.relu(user_postive_ind_map_in_batch))
+        anchor_vectors = tf.reduce_sum(mask_fea_in_batch * fea_in_batch,axis=1)/(tf.reduce_sum(mask_fea_in_batch,axis=1))
+
+        """ caculate distance to anchor_vectors """
+        fea_diff_in_batch = tf.expand_dims(anchor_vectors,axis=1) - self.features
+        dist_in_batch_part_1 = tf.einsum('bim,bmn->bin', fea_diff_in_batch, metrics_in_batch)
+        item_scores = tf.negative(tf.einsum('bin,bin->bi', fea_diff_in_batch, dist_in_batch_part_1))
+
         return AttrDict(locals())
 
-    def train():
+    def train_main(self):
         model = self.model
-        val_model = self.val_model
 
-        valid_users = numpy.random.choice(list(set(self.valid.nonzero()[0])), size=10, replace=False)
-        print(valid_users)
-        """
+        """ Evaluation Set-up """
+        val_model = self.val_model
+        valid_users = np.random.choice(list(set(self.valid.nonzero()[0])), size=1000, replace=False)
+        validation_recall = RecallEvaluator(val_model, self.train, self.valid)
+
+        """ Config set-up """
         configPro = tf.ConfigProto(allow_soft_placement=True)
         configPro.gpu_options.allow_growth = True
 
         with tf.Session(config=configPro) as sess:
             sess.run(tf.global_variables_initializer())
 
-            train_handle = sess.run(train_iterator.string_handle())
-            sess.run(train_iterator.initializer)
-            sess.run(selctive_opt,feed_dict = {val_model: train_handle})
-        """
+            train_handle = sess.run(model.train_iterator.string_handle())
 
+            while True:
+                """ Evaluation recall@k """
+                valid_recalls = []
+                for user_chunk in toolz.partition_all(100, valid_users):
+                    valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
+                print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
+                # TO DO: early stopping
 
+                """ Trainning model"""
+                sess.run(model.train_iterator.initializer)
+
+                losses = []
+
+                for _ in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
+                    _, loss = sess.run((model.selctive_opt, model.total_loss),
+                                       feed_dict = {model.handle: train_handle})
+
+                    losses.append(loss)
+
+                print("\nTraining loss {}".format(np.mean(losses)))
 
 
 def main_algo(config):
@@ -222,12 +260,7 @@ def main_algo(config):
 
     # without feature vectors
     pucml_learner = PUCML_Base(config,features=None,train=train,valid=valid,test=test)
-    pucml_learner.train()
-    # with feature vectors
-    #ucml_learner = PUCML_Base(config,features=dense_features,train=train,valid=valid,test=test)
-    # O,U = batch
-    # while True:
-    #     pass
+    pucml_learner.train_main()
 
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
