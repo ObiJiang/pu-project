@@ -27,8 +27,20 @@ class PUCML_Base():
         train_user_item_matrix = lil_matrix(self.train)
         self.train_user_item_pairs = np.asarray(train_user_item_matrix.nonzero()).T
         self.train_user_to_positive_set = {u: set(row) for u, row in enumerate(train_user_item_matrix.rows)}
-        for u, row in enumerate(train_user_item_matrix.rows)
-            print(len(row))
+
+        # creat indices map on postive items
+        n_p_elements_per_row = []
+        for u, row in enumerate(train_user_item_matrix.rows):
+            n_p_elements_per_row.append(len(row))
+        self.n_p_elements_per_row_tf = tf.constant(n_p_elements_per_row, dtype=tf.int32)
+        self.max_n_p_elem = max(n_p_elements_per_row)
+
+        user_postive_ind_map_numpy = -1*np.ones((self.n_users,self.max_n_p_elem),dtype=np.int32)
+        for u, row in enumerate(train_user_item_matrix.rows):
+            if row:
+                user_postive_ind_map_numpy[u,:len(row)] = np.array(row)
+        self.user_postive_ind_map = tf.constant(user_postive_ind_map_numpy, dtype=tf.int32)
+
         self.create_varaibles(features)
         self.model()
 
@@ -46,12 +58,12 @@ class PUCML_Base():
         # subsample base item pairs. It is extremly rare that two items would be the same. If it is the same, it's not a big deal
         vi = tf.constant(np.random.randint(0,self.n_items,size=(self.n_subsample_pairs)),dtype=tf.int32)
         vj = tf.constant(np.random.randint(0,self.n_items,size=(self.n_subsample_pairs)),dtype=tf.int32)
-        vi_vj = vi - vj
-        self.base_matrices = tf.matmul(tf.expand_dims(tf.gather(self.features,vi_vj),2),
-                                       tf.expand_dims(tf.gather(self.features,vi_vj),1)) #(batch,emb_dim,emb_dim)
+        vi_vj = tf.gather(self.features,vi) - tf.gather(self.features,vj)
+        self.base_matrices = tf.matmul(tf.expand_dims(vi_vj,2),
+                                       tf.expand_dims(vi_vj,1)) #(batch,emb_dim,emb_dim)
         # generate alpha for all the users
-        self.alpha = tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
-                                        stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32))
+        self.alpha = tf.exp(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
+                                        stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
 
     def input_dataset_pipeline(self):
         dataset = tf.data.Dataset.from_tensor_slices(self.train_user_item_pairs)
@@ -89,30 +101,65 @@ class PUCML_Base():
 
         p_u = iterator.get_next() # p_u: [user, pos_item, {unlabel_item}]
 
-        # find associated metrices with users in p_u
+        """ find associated metrices with users in p_u """
         alpha_in_batch = tf.gather(self.alpha,p_u[:,0])
         metrics_in_batch = tf.reduce_sum(tf.expand_dims(tf.expand_dims(alpha_in_batch,2),2) * self.base_matrices,
                              axis=1)
 
-        # compute distances
+        """ compute distances """
         fea_in_batch = tf.gather(self.features,p_u[:,1:])
         fea_diff_in_batch = tf.expand_dims(fea_in_batch,2) - self.features
         dist_in_batch_part_1 = tf.einsum('bijm,bmn->bijn', fea_diff_in_batch, metrics_in_batch)
         dist_in_batch = tf.negative(tf.einsum('bijn,bijn->bij', fea_diff_in_batch, dist_in_batch_part_1))
 
-        # compute nearest neighbors
-        #pnn,_ = tf.map_fn(self._find_positive_nn, (dist_in_batch,p_u[:,0]),dtype=(tf.float32, tf.int32))
+        """ compute nearest neighbors """
+        lower_bound = tf.reduce_min(dist_in_batch)
+        user_postive_ind_map_in_batch = tf.gather(self.user_postive_ind_map,p_u[:,0])
 
-        with tf.Session() as sess:
-            train_handle = sess.run(train_iterator.string_handle())
-            sess.run(train_iterator.initializer)
-            sess.run(tf.global_variables_initializer())
-            print(sess.run(pnn,feed_dict = {handle: train_handle}))
+        # TO DO: max_n_p_elem can be optimized for each batch
+        user_index_in_batch = tf.tile(tf.expand_dims(tf.range(self.batch_size),axis=1),[1,self.max_n_p_elem])
+        user_item_postive_pair_ind_in_batch = tf.concat([tf.expand_dims(user_index_in_batch,axis=2),
+                                                         tf.expand_dims(user_postive_ind_map_in_batch,axis=2)],axis=2)
+        user_item_postive_pair_ind_in_batch_unroll = tf.reshape(user_item_postive_pair_ind_in_batch,[-1,2])
+        # eliminate all the -1 at the end
+        nonzero_indices = tf.where((user_item_postive_pair_ind_in_batch_unroll[:,0]+1)*user_item_postive_pair_ind_in_batch_unroll[:,1]>=0)
+        nonzero_values = tf.gather_nd(user_item_postive_pair_ind_in_batch_unroll, nonzero_indices)
 
+        # create a big matrix where user-positve-item pairs have values of the lower bound
+        indices = nonzero_values
+        updates = tf.cast(tf.sign(nonzero_values[:,0]+1),tf.float32)*lower_bound
+        shape = tf.constant([self.batch_size, self.n_items])
+        scatter = tf.expand_dims(tf.scatter_nd(indices, updates, shape),axis=1)
+
+        # compute postive nn
+        pnn_dist,_ = tf.nn.top_k(dist_in_batch - scatter,k=self.k+1) # +1 because the output will include itself (0 distance)
+        pnn_dist_filter = tf.nn.relu(pnn_dist) # non-postive items will not be above 0
+        pnn_dist_filter = tf.concat([pnn_dist_filter[:,0:1,1:],pnn_dist_filter[:,1:,:self.k]],axis=1)
+
+        nonnegative_indices = tf.tile(tf.expand_dims(tf.sign(user_postive_ind_map_in_batch + 1)[:,:self.k+1],axis=1),
+                                     [1,1+self.n_unlabeled,1])
+        nonnegative_indices = tf.concat([nonnegative_indices[:,0:1,1:],nonnegative_indices[:,1:,:self.k]],axis=1)
+        pnn_dist_sum = tf.reduce_sum(pnn_dist_filter,axis=2) +\
+                       tf.reduce_sum(tf.cast(nonnegative_indices,tf.float32)*lower_bound,axis=2)
+
+        # compute unlabeled nn
+        unn_dist,_ = tf.nn.top_k(dist_in_batch + scatter,k=self.k+1)
+        unn_dist = tf.concat([unn_dist[:,0:1,:self.k],unn_dist[:,1:,1:]],axis=1)
+        unn_dist_sum = tf.reduce_sum(unn_dist,axis=2)
 
         # compute score functions
 
         # tf.cond for different optimization
+        with tf.Session() as sess:
+            train_handle = sess.run(train_iterator.string_handle())
+            sess.run(train_iterator.initializer)
+            sess.run(tf.global_variables_initializer())
+            # pnn_dist_out, nonzero_value= sess.run([pnn_dist,nonzero_values],feed_dict = {handle: train_handle})
+            # print(pnn_dist_out.shape,nonzero_value)
+            print(sess.run([pnn_dist_filter,nonnegative_indices,pnn_dist_sum],feed_dict = {handle: train_handle}))
+
+
+
 
 def main_algo(config):
     # get user-item matrix
@@ -120,6 +167,9 @@ def main_algo(config):
     n_users, n_items = user_item_matrix.shape
     # make feature as dense matrix
     dense_features = features.toarray() + 1E-10
+
+    # TO DO: JL -> 3000 dim, PCA ->
+
     # get train/valid/test user-item matrices
     train, valid, test = split_data(user_item_matrix)
 
