@@ -16,6 +16,7 @@ class PUCML_Base():
         # hyper-parameter
         self.beta = config.beta   # tolerance margin
         self.gamma = config.gamma # disconted learning rate
+        self.prior = config.prior
         self.lr = config.lr
         self.k = config.k
         self.batch_size = config.batch_size
@@ -100,7 +101,7 @@ class PUCML_Base():
 
     def prior_estimation(self):
         # placeholder value 0.5
-        return 0.5
+        return self.prior
 
     def _find_positive_nn(self,dist_users):
         dist,users = dist_users
@@ -302,6 +303,13 @@ if __name__ == '__main__':
         type     = float,
         default  = 0.5,
         help     = 'disconted learning rate')
+
+    parser.add_argument('--prior',
+        action   = 'store',
+        required = False,
+        type     = float,
+        default  = 0.5,
+        help     = 'prior distribution')
 
     parser.add_argument('--lr',
         action   = 'store',
