@@ -181,8 +181,8 @@ class PUCML_Base():
         neg_opt = tf.train.AdamOptimizer(learning_rate=self.lr*self.gamma).minimize(-1*negative_loss)
 
         # tf.cond for different optimization
-        selctive_opt = tf.cond(negative_loss > self.beta, lambda: full_opt, lambda: neg_opt)
-
+        # selctive_opt = tf.cond(negative_loss > self.beta, lambda: full_opt, lambda: neg_opt)
+        selctive_opt = full_opt
         return AttrDict(locals())  # The magic line.
 
     # return scores for a couple of users
