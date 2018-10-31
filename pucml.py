@@ -162,8 +162,8 @@ class PUCML_Base():
         unn_dist_sum = tf.reduce_sum(unn_dist,axis=2)
 
         """ compute score functions """
-        confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
-        # confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
+        # confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
+        confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
 
         p_scores = confidence_scores[:,0]
         u_scores = confidence_scores[:,1:]
