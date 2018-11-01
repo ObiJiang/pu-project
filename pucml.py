@@ -76,7 +76,9 @@ class PUCML_Base():
         self.base_matrices = tf.matmul(tf.expand_dims(vi_vj,2),
                                        tf.expand_dims(vi_vj,1)) #(batch,emb_dim,emb_dim)
         # generate alpha for all the users
-        self.alpha = tf.exp(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
+        # self.alpha = tf.exp(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
+        #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
+        self.alpha = tf.abs(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
                                         stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
 
     def input_dataset_pipeline(self):
