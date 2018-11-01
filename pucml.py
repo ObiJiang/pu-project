@@ -65,7 +65,6 @@ class PUCML_Base():
         if features is not None:
             self.features = tf.constant(features, dtype=tf.float32)
         else:
-            # will be changed to random initialization later (done)
             self.emb_dim = 30
             self.features = tf.Variable(tf.random_normal([self.n_items, self.emb_dim],
                                             stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
@@ -277,7 +276,8 @@ def main_algo(config):
         pca_projected_fea = pca.transform(jl_projected_fea)
 
         print(pca_projected_fea.shape)
-        fea = pca_projected_fea
+        fea = pca_projected_fea/pca_projected_fea.shape[1]
+        print(fea)
     else:
         fea = None
 
