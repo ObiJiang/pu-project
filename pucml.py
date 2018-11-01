@@ -177,8 +177,8 @@ class PUCML_Base():
         """
 
         R_p_plus = tf.reduce_mean(-1*tf.log(p_scores+1))
-        R_p_minus = tf.reduce_mean(-1*tf.log(-p_scores))
-        P_u_minus = tf.reduce_mean(-1*tf.log(-u_scores))
+        R_p_minus = tf.reduce_mean(-1*tf.log(2-p_scores))
+        P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))
 
         """ define loss and optimization """
         # define two differnt losses and their optimizer
@@ -247,7 +247,7 @@ class PUCML_Base():
 
                 # for _ in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
                 for _ in tqdm(range(int(10)), desc="Optimizing..."):
-                    _, loss = sess.run((model.selctive_opt, model.p_scores),
+                    _, loss = sess.run((model.selctive_opt, model.total_loss),
                                        feed_dict = {model.handle: train_handle})
                     losses.append(loss)
 
