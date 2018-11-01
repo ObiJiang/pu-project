@@ -247,7 +247,7 @@ class PUCML_Base():
 
                 # for _ in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
                 for _ in tqdm(range(int(10)), desc="Optimizing..."):
-                    _, loss = sess.run((model.selctive_opt, model.total_loss),
+                    _, loss = sess.run((model.selctive_opt, model.p_scores),
                                        feed_dict = {model.handle: train_handle})
                     losses.append(loss)
 
