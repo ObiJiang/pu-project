@@ -7,7 +7,7 @@ def PEPriorEst_Per_User(xp, xu, sigma_list = None, lambda_list=None, kfolds=5):
     # Set the default sigma_list
     if sigma_list == None:
         x_pu = np.concatenate((xp,xu),axis=0)
-        med_dist = CalculateDist2(x_pu,x_pu)
+        med_dist = CalculateMedian(x_pu,x_pu)
         sigma_list = np.linspace(0.2, 5.0, num=10)*med_dist
 
     if lambda_list == None:
@@ -45,14 +45,26 @@ def PEPriorEst_Per_User(xp, xu, sigma_list = None, lambda_list=None, kfolds=5):
         xi_tr = xu[idx_xu_tr,:]
         xu_te = xu[idx_xu_te,:]
 
+        x_ce = xp_tr
         for sigma_idx, sigma_val in enumerate(sigma_list):
+
+            # Calculate Phi first
+            Phi1_tr = GaussBasis(xp_tr, x_ce, sigma_val)
+			Phi1_te = GaussBasis(xp_te, x_ce, sigma_val)
+
+			Phi2_tr = GaussBasis(xu_tr, x_ce, sigma_val)
+			Phi2_te = GaussBasis(xu_te, x_ce, sigma_val
 
             for lambda_idx, lambda_val in enumerate(lambda_list):
 
     return 0.3
 
+def GaussBasis(z,c,sigma):
+    Phi_tmp = -CalculateDist(z,c)/2
+    Phi= np.exp(Phi_tmp/(sigma**2))
+    return Phi.T
 
-def CalculateDist2(X,Y):
+def CalculateMedian(X,Y):
     nx,d = X.shape
     ny,d = Y.shape
     X2 = np.sum(X**2,axis=1,keepdims=True)
@@ -62,6 +74,16 @@ def CalculateDist2(X,Y):
     median = np.sqrt(np.median(XC_dist2))
 
     return median
+
+def CalculateDist(X,Y):
+    nx,d = X.shape
+    ny,d = Y.shape
+    X2 = np.sum(X**2,axis=1,keepdims=True)
+    Y2 = np.sum(Y**2,axis=1,keepdims=True)
+
+    XC_dist2 = np.tile(Y2.T, (nx,1))+np.tile(X2,(1,ny))-2*X @ Y.T
+
+    return XC_dist2
 
 if __name__ == '__main__':
     test_prior = 0.3 # biased
