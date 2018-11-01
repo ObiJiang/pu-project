@@ -76,9 +76,7 @@ class PUCML_Base():
         self.base_matrices = tf.matmul(tf.expand_dims(vi_vj,2),
                                        tf.expand_dims(vi_vj,1)) #(batch,emb_dim,emb_dim)
         # generate alpha for all the users
-        # self.alpha = tf.exp(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
-        #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
-        self.alpha = tf.abs(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
+        self.alpha = tf.exp(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
                                         stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
 
     def input_dataset_pipeline(self):
@@ -176,7 +174,7 @@ class PUCML_Base():
         P_u_minus = tf.reduce_mean(1/(1 + tf.exp(-1*u_scores)))
         """
 
-        R_p_plus = tf.reduce_mean(-1*tf.log(p_scores+1))
+        R_p_plus = tf.reduce_mean(-1*tf.log(1+p_scores))
         R_p_minus = tf.reduce_mean(-1*tf.log(2-p_scores))
         P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))
 
@@ -245,8 +243,7 @@ class PUCML_Base():
 
                 losses = []
 
-                # for _ in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
-                for _ in tqdm(range(int(10)), desc="Optimizing..."):
+                for _ in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
                     _, loss = sess.run((model.selctive_opt, model.total_loss),
                                        feed_dict = {model.handle: train_handle})
                     losses.append(loss)
