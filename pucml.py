@@ -243,7 +243,8 @@ class PUCML_Base():
 
                 losses = []
 
-                for _ in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
+                # for _ in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
+                for _ in tqdm(range(int(10)), desc="Optimizing..."):
                     _, loss = sess.run((model.selctive_opt, model.total_loss),
                                        feed_dict = {model.handle: train_handle})
                     losses.append(loss)
@@ -277,7 +278,6 @@ def main_algo(config):
 
         print(pca_projected_fea.shape)
         fea = pca_projected_fea/pca_projected_fea.shape[1]
-        print(fea)
     else:
         fea = None
 
