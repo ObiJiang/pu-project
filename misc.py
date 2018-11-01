@@ -27,7 +27,6 @@ def citeulike(dir='./Data/ctrsr_datasets/citeulike-t',tag_occurence_thres=10):
             user_dict[u].add(int(item))
     n_users = len(user_dict)
     n_items = max([item for items in user_dict.values() for item in items]) + 1
-
     # create dok (dictionary of key) based sparse matrix
     user_item_matrix = dok_matrix((n_users, n_items), dtype=np.int32)
 
@@ -36,6 +35,7 @@ def citeulike(dir='./Data/ctrsr_datasets/citeulike-t',tag_occurence_thres=10):
         # ignore the first element in each line, which is the number of items the user liked.
         for item in items[1:]:
             user_item_matrix[u, int(item)] = 1
+
     # create feature matrix
     n_features = 0
     for l in open(tag_item_file).readlines():

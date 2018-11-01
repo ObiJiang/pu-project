@@ -63,7 +63,7 @@ class PUCML_Base():
         """ The following are variables used in the model (feature vectors and alpha) """
         # how feature vectors are generated
         if features is not None:
-            self.features = tf.constant(self.features, dtype=tf.float32)
+            self.features = tf.constant(features, dtype=tf.float32)
         else:
             # will be changed to random initialization later (done)
             self.emb_dim = 30
@@ -272,7 +272,7 @@ def main_algo(config):
         scaler.fit(jl_projected_fea)
         jl_projected_fea = scaler.transform(jl_projected_fea)
 
-        pca = PCA(.8)
+        pca = PCA(.6)
         pca.fit(jl_projected_fea)
         pca_projected_fea = pca.transform(jl_projected_fea)
 
