@@ -42,7 +42,7 @@ def PEPriorEst_Per_User(xp, xu, sigma_list = None, lambda_list=None, kfolds=5):
         xp_tr = xp[idx_xp_tr,:]
         xp_te = xp[idx_xp_te,:]
 
-        xi_tr = xu[idx_xu_tr,:]
+        xu_tr = xu[idx_xu_tr,:]
         xu_te = xu[idx_xu_te,:]
 
         x_ce = xp_tr
@@ -50,14 +50,52 @@ def PEPriorEst_Per_User(xp, xu, sigma_list = None, lambda_list=None, kfolds=5):
 
             # Calculate Phi first
             Phi1_tr = GaussBasis(xp_tr, x_ce, sigma_val)
-			Phi1_te = GaussBasis(xp_te, x_ce, sigma_val)
+            Phi1_te = GaussBasis(xp_te, x_ce, sigma_val)
 
-			Phi2_tr = GaussBasis(xu_tr, x_ce, sigma_val)
-			Phi2_te = GaussBasis(xu_te, x_ce, sigma_val
+            Phi2_tr = GaussBasis(xu_tr, x_ce, sigma_val)
+            Phi2_te = GaussBasis(xu_te, x_ce, sigma_val)
+
+            # Calculate H and h
+            h_tr = np.mean(Phi1_tr, axis=1)
+            h_te = np.mean(Phi1_te, axis=1)
+
+            H_tr = (p1_tr/np_tr)*Phi1_tr @ Phi1_tr.T + ((1-p1_tr)/nu_tr)*Phi2_tr @ Phi2_tr.T
+            H_te = (p1_te/np_te)*Phi1_te @ Phi1_te.T + ((1-p1_te)/nu_te)*Phi2_te @ Phi2_te.T
 
             for lambda_idx, lambda_val in enumerate(lambda_list):
+                alpha = np.linalg.solve(H_tr + lambda_val* np.eye(np_tr), h_tr)
 
-    return 0.3
+                # calculate the score
+                score = 1/2*alpha.T @ H_te @ alpha - alpha.T @ h_te
+
+                cv_scores[sigma_idx, lambda_idx] = cv_scores[sigma_idx, lambda_idx] + score
+
+    sigma_chosen_ind = np.argmin(np.min(cv_scores,axis=1))
+    lambda_chosen_ind = np.argmin(np.min(cv_scores,axis=0))
+
+    sigma_chosen = sigma_list[sigma_chosen_ind]
+    lambda_chosen = lambda_list[lambda_chosen_ind]
+
+    x_ce = xp
+
+    Phi1 = GaussBasis(xp, x_ce, sigma_chosen)
+    Phi2 = GaussBasis(xu, x_ce, sigma_chosen)
+
+    p1 = n_p/(n_p+n_u);
+
+    h = np.mean(Phi1, axis=1)
+    H = (p1/n_p) * Phi1 @ Phi1.T + (1-p1)/n_u * Phi2 @ Phi2.T
+
+    # calculate the density ratio
+    alpha = np.linalg.solve(H + lambda_chosen*np.eye(n_p), h)
+
+    # calculate the prior
+    prior = 1/(2*alpha.T @ h - alpha.T @ H @alpha)
+
+    prior = max(prior, p1)
+    prior = min(prior, 1)
+
+    return prior
 
 def GaussBasis(z,c,sigma):
     Phi_tmp = -CalculateDist(z,c)/2
@@ -86,7 +124,7 @@ def CalculateDist(X,Y):
     return XC_dist2
 
 if __name__ == '__main__':
-    test_prior = 0.3 # biased
+    test_prior = 0.5 # biased
     dim = 50
     num_samples = 100
     prior_seq = np.random.binomial(1, test_prior, num_samples)
@@ -97,4 +135,5 @@ if __name__ == '__main__':
     xp = np.random.normal(0, 0.1, (n_p,dim))
     xm = np.random.normal(5, 0.1, (n_u,dim))
 
-    PEPriorEst_Per_User(xp,xm)
+    prior = PEPriorEst_Per_User(xp,xm)
+    print(prior)
