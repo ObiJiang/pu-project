@@ -1,5 +1,7 @@
 import numpy as np
-
+from scipy.sparse import lil_matrix
+from tqdm import tqdm
+""" Prior Estimation for single user """
 def PEPriorEst_Per_User(xp, xu, sigma_list = None, lambda_list=None, kfolds=5):
     n_p,d = xp.shape
     n_u,d = xu.shape
@@ -123,6 +125,28 @@ def CalculateDist(X,Y):
 
     return XC_dist2
 
+""" Prior Estimation Wrapper"""
+def prior_estimation_data_matrix(train,features):
+    train_user_item_matrix = lil_matrix(train)
+    priorList = []
+    for u, row in enumerate(tqdm(train_user_item_matrix.rows)):
+        if row:
+            row = np.array(row)
+            xp = features[row,:]
+
+            """
+            mask = np.ones(train.shape[1],dtype=bool)
+
+            mask[row] = False
+            """
+            mask = np.random.choice(train.shape[1],100*len(row))
+            xu = features[mask]
+
+            prior = PEPriorEst_Per_User(xp,xu)
+            priorList.append(prior)
+    print("\nPrior (Sampled 1:100) {}".format(np.mean(priorList)))
+
+
 if __name__ == '__main__':
     test_prior = 0.5 # biased
     dim = 50
@@ -132,8 +156,8 @@ if __name__ == '__main__':
     n_p = np.sum(prior_seq == 1)
     n_u = num_samples - n_p
 
-    xp = np.random.normal(0, 0.1, (n_p,dim))
-    xm = np.random.normal(5, 0.1, (n_u,dim))
+    xp = np.random.normal(0, 0.001, (n_p,dim))
+    xm = np.random.normal(3, 0.001, (n_u,dim))
 
     prior = PEPriorEst_Per_User(xp,xm)
     print(prior)

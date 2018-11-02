@@ -6,6 +6,7 @@ import tensorflow as tf
 import toolz
 import argparse
 from tqdm import tqdm
+from prior_est import prior_estimation_data_matrix
 
 """ Import PCA-related stuff from sklearn """
 from sklearn.preprocessing import StandardScaler
@@ -282,14 +283,15 @@ def main_algo(config):
 
     # get train/valid/test user-item matrices
     train, valid, test = split_data(user_item_matrix)
+    prior_estimation_data_matrix(train,fea)
 
     # add a few stuff to config
-    config.n_users = n_users
-    config.n_items = n_items
-
-    # without feature vectors
-    pucml_learner = PUCML_Base(config,features=fea,train=train,valid=valid,test=test)
-    pucml_learner.train_main()
+    # config.n_users = n_users
+    # config.n_items = n_items
+    #
+    # # without feature vectors
+    # pucml_learner = PUCML_Base(config,features=fea,train=train,valid=valid,test=test)
+    # pucml_learner.train_main()
 
 
 if __name__ == '__main__':
