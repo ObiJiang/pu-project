@@ -263,7 +263,7 @@ def main_algo(config):
         """ Random Projection based JL lemma """
         jl_dim = 2000
         ori_dim = dense_features.shape[1]
-        random_matrix = np.random.normal(size=(ori_dim, jl_dim))
+        random_matrix = np.random.normal(size=(ori_dim, jl_dim))*np.sqrt(jl_dim/ori_dim)
 
         jl_projected_fea = dense_features @ random_matrix
 
@@ -272,7 +272,7 @@ def main_algo(config):
         scaler.fit(jl_projected_fea)
         jl_projected_fea = scaler.transform(jl_projected_fea)
 
-        pca = PCA(.6)
+        pca = PCA(.5)
         pca.fit(jl_projected_fea)
         pca_projected_fea = pca.transform(jl_projected_fea)
 
@@ -283,15 +283,17 @@ def main_algo(config):
 
     # get train/valid/test user-item matrices
     train, valid, test = split_data(user_item_matrix)
-    prior_estimation_data_matrix(train,fea,config.r_prior_sample)
 
+    # prior estimation
+    #prior_estimation_data_matrix(train,fea,config.r_prior_sample)
+    return
     # add a few stuff to config
-    # config.n_users = n_users
-    # config.n_items = n_items
-    #
-    # # without feature vectors
-    # pucml_learner = PUCML_Base(config,features=fea,train=train,valid=valid,test=test)
-    # pucml_learner.train_main()
+    config.n_users = n_users
+    config.n_items = n_items
+
+    # without feature vectors
+    pucml_learner = PUCML_Base(config,features=fea,train=train,valid=valid,test=test)
+    pucml_learner.train_main()
 
 
 if __name__ == '__main__':
