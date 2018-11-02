@@ -283,7 +283,7 @@ def main_algo(config):
 
     # get train/valid/test user-item matrices
     train, valid, test = split_data(user_item_matrix)
-    prior_estimation_data_matrix(train,fea)
+    prior_estimation_data_matrix(train,fea,config.r_prior_sample)
 
     # add a few stuff to config
     # config.n_users = n_users
@@ -345,6 +345,13 @@ if __name__ == '__main__':
         type     = int,
         default  = 20,
         help     = 'number of unlabeled data')
+
+    parser.add_argument('--r_prior_sample',
+        action   = 'store',
+        required = False,
+        type     = int,
+        default  = 100,
+        help     = 'ratior for sampling unlabeled items for prior estimation')
 
     parser.add_argument('--n_subsample_pairs',
         action   = 'store',

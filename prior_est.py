@@ -126,25 +126,25 @@ def CalculateDist(X,Y):
     return XC_dist2
 
 """ Prior Estimation Wrapper"""
-def prior_estimation_data_matrix(train,features):
+def prior_estimation_data_matrix(train,features,r_prior_sample):
     train_user_item_matrix = lil_matrix(train)
     priorList = []
     for u, row in enumerate(tqdm(train_user_item_matrix.rows)):
         if row:
+            # labled data
             row = np.array(row)
             xp = features[row,:]
 
-            """
+            # unlabeled data
             mask = np.ones(train.shape[1],dtype=bool)
-
             mask[row] = False
-            """
-            mask = np.random.choice(train.shape[1],20*len(row))
             xu = features[mask]
-
+            mask = np.random.choice(train.shape[1]-len(row),r_prior_sample*len(row),replace=False)
+            xu = xu[mask]
             prior = PEPriorEst_Per_User(xp,xu)
             priorList.append(prior)
-    print("\nPrior (Sampled 1:100) {}".format(np.mean(priorList)))
+
+    print("Prior (Sampled 1:{}) {}".format(r_prior_sample,np.mean(priorList)))
 
 
 if __name__ == '__main__':
