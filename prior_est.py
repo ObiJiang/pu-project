@@ -139,7 +139,7 @@ def prior_estimation_data_matrix(train,features):
 
             mask[row] = False
             """
-            mask = np.random.choice(train.shape[1],100*len(row))
+            mask = np.random.choice(train.shape[1],20*len(row))
             xu = features[mask]
 
             prior = PEPriorEst_Per_User(xp,xu)
