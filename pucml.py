@@ -286,7 +286,7 @@ def main_algo(config):
 
     # prior estimation
     #prior_estimation_data_matrix(train,fea,config.r_prior_sample)
-    return
+    
     # add a few stuff to config
     config.n_users = n_users
     config.n_items = n_items
