@@ -233,6 +233,7 @@ class PUCML_Base():
         configPro.gpu_options.allow_growth = True
 
         with tf.Session(config=configPro) as sess:
+            sess = tf_debug.TensorBoardDebugWrapperSession(sess, 'localhost:6064')
             sess.run(tf.global_variables_initializer())
 
             train_handle = sess.run(model.train_iterator.string_handle())
