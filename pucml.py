@@ -169,7 +169,8 @@ class PUCML_Base():
 
         """ compute score functions """
         # confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
-        confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
+        #confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
+        confidence_scores = tf.log(pnn_dist_sum)-tf.log(pnn_dist_sum+unn_dist_sum) # log version
 
         p_scores = confidence_scores[:,0]
         u_scores = confidence_scores[:,1:]
@@ -259,9 +260,9 @@ class PUCML_Base():
                         valid_recalls = []
                         for user_chunk in toolz.partition_all(100, valid_users):
                             valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
-                        print("Recall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
+                        print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
                         print("Training loss {}".format(np.mean(losses)))
-                print("Training loss {}".format(np.mean(losses)))
+                print("\nTraining loss {}".format(np.mean(losses)))
 
 
 def main_algo(config):
