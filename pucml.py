@@ -23,6 +23,7 @@ class PUCML_Base():
         self.batch_size = config.batch_size
         self.n_unlabeled = config.n_unlabeled
         self.n_subsample_pairs = config.n_subsample_pairs
+        self.evaluation_loop_num = config.evaluation_loop_num
 
         # prior
         self.prior = self.prior_estimation()
@@ -167,7 +168,7 @@ class PUCML_Base():
         """ compute score functions """
         # confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
         confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
-
+        self.confidence_scores = confidence_scores
         p_scores = confidence_scores[:,0]
         u_scores = confidence_scores[:,1:]
 
@@ -246,11 +247,15 @@ class PUCML_Base():
 
                 losses = []
 
-                for _ in tqdm(range(int(100)), desc="Optimizing..."):
+                for loop_idx in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
                     _, loss = sess.run((model.selctive_opt, model.total_loss),
                                        feed_dict = {model.handle: train_handle})
                     losses.append(loss)
+                    if loop_idx%self.evaluation_loop_num == 0:
+                        print(sess.run(self.alpha_in_batch))
+                        print(sess.run(self.confidence_scores))
 
+                        print("\nTraining loss {}".format(np.mean(losses)))
                 print("\nTraining loss {}".format(np.mean(losses)))
 
 
@@ -342,6 +347,13 @@ if __name__ == '__main__':
         type     = int,
         default  = 1000,
         help     = 'batch size')
+
+    parser.add_argument('--evaluation_loop_num',
+        action   = 'store',
+        required = False,
+        type     = int,
+        default  = 100,
+        help     = 'evaluation loop number')
 
     parser.add_argument('--n_unlabeled',
         action   = 'store',
