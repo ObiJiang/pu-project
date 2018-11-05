@@ -181,9 +181,9 @@ class PUCML_Base():
         P_u_minus = tf.reduce_mean(1/(1 + tf.exp(-1*u_scores)))
         """
 
-        R_p_plus = tf.reduce_mean(-1*tf.log(100+p_scores))
-        R_p_minus = tf.reduce_mean(-1*tf.log(200-p_scores))
-        P_u_minus = tf.reduce_mean(-1*tf.log(200-u_scores))
+        R_p_plus = tf.reduce_mean(-1*tf.log(1+p_scores))
+        R_p_minus = tf.reduce_mean(-1*tf.log(2-p_scores))
+        P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))
 
         """ define loss and optimization """
         # define two differnt losses and their optimizer
@@ -255,8 +255,8 @@ class PUCML_Base():
                                        feed_dict = {model.handle: train_handle})
                     losses.append(loss)
                     if loop_idx%self.evaluation_loop_num == 0:
-                        # print(sess.run(model.alpha_in_batch,feed_dict = {model.handle: train_handle}))
-                        # print(sess.run([model.pnn_dist_sum,model.unn_dist_sum],feed_dict = {model.handle: train_handle}))
+                        print(sess.run(model.alpha_in_batch,feed_dict = {model.handle: train_handle}))
+                        print(sess.run([model.pnn_dist_sum,model.unn_dist_sum],feed_dict = {model.handle: train_handle}))
                         valid_recalls = []
                         for user_chunk in toolz.partition_all(100, valid_users):
                             valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
