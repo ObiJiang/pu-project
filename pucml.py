@@ -80,7 +80,7 @@ class PUCML_Base():
                                        tf.expand_dims(vi_vj,1)) #(batch,emb_dim,emb_dim)
         # generate alpha for all the users
         self.pre_alpha = tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
-                                         stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32))
+                                     stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32))
         # self.alpha = tf.exp(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
         #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
         self.alpha = tf.nn.softmax(self.pre_alpha)
