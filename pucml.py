@@ -290,7 +290,7 @@ def main_algo(config):
         pca_projected_fea = pca.transform(jl_projected_fea)
 
         print(pca_projected_fea.shape)
-        fea = pca_projected_fea/pca_projected_fea.shape[1]
+        fea = pca_projected_fea/(100*pca_projected_fea.shape[1])
     else:
         fea = None
 
