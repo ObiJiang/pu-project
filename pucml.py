@@ -83,7 +83,8 @@ class PUCML_Base():
                                      stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32))
         # self.alpha = tf.exp(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
         #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
-        self.alpha = tf.nn.softmax(self.pre_alpha)
+        # self.alpha = tf.nn.softmax(self.pre_alpha)
+        self.alpha = tf.abs(self.pre_alpha)
         # self.alpha = tf.abs(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
         #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
 
@@ -294,6 +295,7 @@ def main_algo(config):
 
         print(pca_projected_fea.shape)
         fea = pca_projected_fea/(pca_projected_fea.shape[1])
+        print(np.max(fea))
     else:
         fea = None
 
