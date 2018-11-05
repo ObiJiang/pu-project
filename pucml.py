@@ -168,7 +168,7 @@ class PUCML_Base():
         """ compute score functions """
         # confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
         confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
-        self.confidence_scores = confidence_scores
+
         p_scores = confidence_scores[:,0]
         u_scores = confidence_scores[:,1:]
 
@@ -252,8 +252,8 @@ class PUCML_Base():
                                        feed_dict = {model.handle: train_handle})
                     losses.append(loss)
                     if loop_idx%self.evaluation_loop_num == 0:
-                        print(sess.run(self.alpha_in_batch))
-                        print(sess.run(self.confidence_scores))
+                        print(sess.run(model.alpha_in_batch))
+                        print(sess.run(model.confidence_scores))
 
                         print("\nTraining loss {}".format(np.mean(losses)))
                 print("\nTraining loss {}".format(np.mean(losses)))
