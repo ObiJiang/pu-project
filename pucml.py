@@ -169,8 +169,8 @@ class PUCML_Base():
 
         """ compute score functions """
         # confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
-        #confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
-        confidence_scores = tf.log(pnn_dist_sum)-tf.log(pnn_dist_sum+unn_dist_sum) # log version
+        confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
+        #confidence_scores = tf.log(pnn_dist_sum)-tf.log(pnn_dist_sum+unn_dist_sum) # log version
 
         p_scores = confidence_scores[:,0]
         u_scores = confidence_scores[:,1:]
@@ -181,9 +181,9 @@ class PUCML_Base():
         P_u_minus = tf.reduce_mean(1/(1 + tf.exp(-1*u_scores)))
         """
 
-        R_p_plus = tf.reduce_mean(-1*tf.log(1+p_scores))
-        R_p_minus = tf.reduce_mean(-1*tf.log(2-p_scores))
-        P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))
+        R_p_plus = tf.reduce_mean(-1*tf.log(100+p_scores))
+        R_p_minus = tf.reduce_mean(-1*tf.log(200-p_scores))
+        P_u_minus = tf.reduce_mean(-1*tf.log(200-u_scores))
 
         """ define loss and optimization """
         # define two differnt losses and their optimizer
@@ -290,7 +290,7 @@ def main_algo(config):
         pca_projected_fea = pca.transform(jl_projected_fea)
 
         print(pca_projected_fea.shape)
-        fea = pca_projected_fea/(100*pca_projected_fea.shape[1])
+        fea = pca_projected_fea/(pca_projected_fea.shape[1])
     else:
         fea = None
 
