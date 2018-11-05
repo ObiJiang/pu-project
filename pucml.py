@@ -79,7 +79,7 @@ class PUCML_Base():
         # generate alpha for all the users
         # self.alpha = tf.exp(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
         #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
-        self.alpha = tf.softmax(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
+        self.alpha = tf.nn.softmax(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
                                         stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
 
     def input_dataset_pipeline(self):
