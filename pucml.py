@@ -85,7 +85,7 @@ class PUCML_Base():
         #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
         self.alpha = tf.nn.softmax(self.pre_alpha)
         # self.alpha = tf.abs(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
-                                        stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
+        #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
 
     def input_dataset_pipeline(self):
         dataset = tf.data.Dataset.from_tensor_slices(self.train_user_item_pairs)
