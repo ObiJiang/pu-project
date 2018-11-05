@@ -255,7 +255,7 @@ class PUCML_Base():
                     losses.append(loss)
                     if loop_idx%self.evaluation_loop_num == 0:
                         print(sess.run(model.alpha_in_batch,feed_dict = {model.handle: train_handle}))
-                        print(sess.run(model.confidence_scores,feed_dict = {model.handle: train_handle}))
+                        print(sess.run([model.pnn_dist_sum,model.unn_dist_sum],feed_dict = {model.handle: train_handle}))
 
                         print("\nTraining loss {}".format(np.mean(losses)))
                 print("\nTraining loss {}".format(np.mean(losses)))
