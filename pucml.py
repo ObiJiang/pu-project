@@ -257,8 +257,8 @@ class PUCML_Base():
                                        feed_dict = {model.handle: train_handle})
                     losses.append(loss)
                     if loop_idx%self.evaluation_loop_num == 0:
-                        print(sess.run(model.alpha_in_batch,feed_dict = {model.handle: train_handle}))
-                        print(sess.run([model.pnn_dist_sum,model.unn_dist_sum],feed_dict = {model.handle: train_handle}))
+                        # print(sess.run(model.alpha_in_batch,feed_dict = {model.handle: train_handle}))
+                        # print(sess.run([model.pnn_dist_sum,model.unn_dist_sum],feed_dict = {model.handle: train_handle}))
                         valid_recalls = []
                         for user_chunk in toolz.partition_all(100, valid_users):
                             valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
