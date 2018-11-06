@@ -189,10 +189,10 @@ class PUCML_Base():
         # R_p_minus = tf.reduce_mean(-1*tf.log(2-p_scores))
         # P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))
 
-        R_p_plus = tf.reduce_mean(-1*p_scores)
+        R_p_plus = tf.reduce_mean(-1*pnn_dist_sum)
         R_p_minus = tf.reduce_mean(p_scores)
         P_u_minus = tf.reduce_mean(u_scores)
-        
+
         """ define loss and optimization """
         # define two differnt losses and their optimizer
         total_loss = self.prior * R_p_plus + (P_u_minus - self.prior * R_p_minus) #+ tf.nn.l2_loss(self.pre_alpha)
