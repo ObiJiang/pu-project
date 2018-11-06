@@ -105,7 +105,7 @@ class RecallEvaluator_knn(object):
                 cur_u_i = np.array([items])
                 item_scores = sess.run(self.model.item_scores,{self.model.u_i:cur_u_i})
                 all_item_scores[cur_u_i[0,1:]] = item_scores[0,:]
-                user_tops[user,:] = np.argpartition(a, -top_k_num)[-top_k_num:]
+                user_tops[user,:] = np.argpartition(all_item_scores, -top_k_num)[-top_k_num:]
 
         recalls = []
         for user_id, tops in zip(users, user_tops):
