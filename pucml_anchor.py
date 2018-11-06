@@ -80,12 +80,12 @@ class PUCML_Base():
         self.base_matrices = tf.matmul(tf.expand_dims(vi_vj,2),
                                        tf.expand_dims(vi_vj,1)) #(batch,emb_dim,emb_dim)
         # generate alpha for all the users
-        self.pre_alpha = tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
-                                     stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32))
-        # self.alpha = tf.exp(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
-        #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
+        # self.pre_alpha = tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
+        #                              stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32))
+        self.alpha = tf.exp(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
+                                        stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
         # self.alpha = tf.nn.softmax(self.pre_alpha)
-        self.alpha = tf.abs(self.pre_alpha)
+        # self.alpha = tf.abs(self.pre_alpha)
         # self.alpha = tf.abs(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
         #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
 
@@ -192,7 +192,7 @@ class PUCML_Base():
 
         """ Evaluation Set-up """
         val_model = self.val_model
-        valid_users = np.random.choice(list(set(self.valid.nonzero()[0])), size=100, replace=False)
+        valid_users = np.random.choice(list(set(self.valid.nonzero()[0])), size=1000, replace=False)
         validation_recall = RecallEvaluator(val_model, self.train, self.valid)
 
         """ Config set-up """
@@ -208,7 +208,7 @@ class PUCML_Base():
             while True:
                 """ Evaluation recall@k """
                 valid_recalls = []
-                for user_chunk in toolz.partition_all(10, valid_users):
+                for user_chunk in toolz.partition_all(100, valid_users):
                     valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
                 print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
                 # TO DO: early stopping
@@ -223,8 +223,6 @@ class PUCML_Base():
                                        feed_dict = {model.handle: train_handle})
                     losses.append(loss)
                     if loop_idx%self.evaluation_loop_num == 0:
-                        # print(sess.run(model.alpha_in_batch,feed_dict = {model.handle: train_handle}))
-                        # print(sess.run([model.pnn_dist_sum,model.unn_dist_sum],feed_dict = {model.handle: train_handle}))
                         valid_recalls = []
                         for user_chunk in toolz.partition_all(10, valid_users):
                             valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
