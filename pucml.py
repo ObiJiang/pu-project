@@ -190,15 +190,15 @@ class PUCML_Base():
         # P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))
 
         R_p_plus = tf.reduce_mean(-1*pnn_dist_sum)
-        R_p_minus = tf.reduce_mean(p_scores)
-        P_u_minus = tf.reduce_mean(u_scores)
+        R_p_minus = tf.reduce_mean(pnn_dist_sum)
+        P_u_minus = tf.reduce_mean(unn_dist_sum)
 
         """ define loss and optimization """
         # define two differnt losses and their optimizer
         total_loss = self.prior * R_p_plus + (P_u_minus - self.prior * R_p_minus) #+ tf.nn.l2_loss(self.pre_alpha)
         negative_loss = P_u_minus - self.prior * R_p_minus
 
-        full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(R_p_plus)
+        full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss)
         neg_opt = tf.train.AdamOptimizer(learning_rate=self.lr*self.gamma).minimize(-1*negative_loss)
 
         # tf.cond for different optimization
