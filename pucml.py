@@ -224,26 +224,60 @@ class PUCML_Base():
     #     return AttrDict(locals())
 
     def valuation_model(self):
-        score_user_ids = tf.placeholder(tf.int32, [None])
+        p_u = tf.placeholder(tf.int32, [None,1])
 
-        """ find associated metrices with users in score_user_ids """
-        alpha_in_batch = tf.gather(self.alpha,score_user_ids)
+        """ find associated metrices with users in p_u """
+        alpha_in_batch = tf.gather(self.alpha,p_u[:,0])
         metrics_in_batch = tf.reduce_sum(tf.expand_dims(tf.expand_dims(alpha_in_batch,2),2) * self.base_matrices,
                              axis=1)
 
-        """ create anchor vectors for each users """
-        user_postive_ind_map_in_batch = tf.gather(self.user_postive_ind_map,score_user_ids)
-        mask_fea_in_batch = tf.expand_dims(tf.cast(tf.sign(user_postive_ind_map_in_batch + 1),tf.float32),axis=2)
-        fea_in_batch = tf.gather(self.features,tf.nn.relu(user_postive_ind_map_in_batch))
+        """ compute distances """
+        fea_in_batch = tf.gather(self.features,p_u[:,1:])
+        fea_diff_in_batch = tf.expand_dims(fea_in_batch,2) - self.features
+        dist_in_batch_part_1 = tf.einsum('bijm,bmn->bijn', fea_diff_in_batch, metrics_in_batch)
+        dist_in_batch = tf.negative(tf.einsum('bijn,bijn->bij', fea_diff_in_batch, dist_in_batch_part_1))
 
-        """ caculate distance to anchor_vectors """
-        fea_diff_in_batch = tf.expand_dims(fea_in_batch,axis=2) - self.features
+        """ compute nearest neighbors """
+        lower_bound = tf.reduce_min(dist_in_batch)
+        user_postive_ind_map_in_batch = tf.gather(self.user_postive_ind_map,p_u[:,0])
+
+        user_index_in_batch = tf.tile(tf.expand_dims(tf.range(self.batch_size),axis=1),[1,self.max_n_p_elem])
+        user_item_postive_pair_ind_in_batch = tf.concat([tf.expand_dims(user_index_in_batch,axis=2),
+                                                         tf.expand_dims(user_postive_ind_map_in_batch,axis=2)],axis=2)
+        user_item_postive_pair_ind_in_batch_unroll = tf.reshape(user_item_postive_pair_ind_in_batch,[-1,2])
+
+        # eliminate all the -1 at the end
+        nonzero_indices = tf.where((user_item_postive_pair_ind_in_batch_unroll[:,0]+1)*user_item_postive_pair_ind_in_batch_unroll[:,1]>=0)
+        nonzero_values = tf.gather_nd(user_item_postive_pair_ind_in_batch_unroll, nonzero_indices)
+
+        # create a big matrix where user-positve-item pairs have values of the lower bound
+        indices = nonzero_values
+        updates = tf.cast(tf.sign(nonzero_values[:,0]+1),tf.float32)*lower_bound
+        shape = tf.constant([self.batch_size, self.n_items])
+        scatter = tf.expand_dims(tf.scatter_nd(indices, updates, shape),axis=1)
+
+        # compute postive nn
+        pnn_dist,_ = tf.nn.top_k(dist_in_batch - scatter,k=self.k) # +1 because the output will include itself (0 distance)
+        pnn_dist_filter = tf.nn.relu(pnn_dist) # non-postive items will not be above 0
+
+        nonnegative_indices = tf.tile(tf.expand_dims(tf.sign(user_postive_ind_map_in_batch + 1)[:,:self.k],axis=1),
+                                     [1,self.batch_size,1])
+
+        pnn_dist_sum = tf.reduce_sum(pnn_dist_filter,axis=2) +\
+                       tf.reduce_sum(tf.cast(nonnegative_indices,tf.float32)*lower_bound,axis=2)
+
+        # compute unlabeled nn
+        unn_dist,_ = tf.nn.top_k(dist_in_batch + scatter,k=self.k+1)
+        unn_dist_sum = tf.reduce_sum(unn_dist,axis=2)
+
+        """ compute score functions """
+        # confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
+        confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
+
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
-            print(sess.run(fea_diff_in_batch,feed_dict = {score_user_ids: np.array([1])}).shape)
+            print(sess.run(confidence_scores,feed_dict = {score_user_ids: np.array([1,1])}).shape)
         return
-        # dist_in_batch_part_1 = tf.einsum('bim,bmn->bin', fea_diff_in_batch, metrics_in_batch)
-        # item_scores = tf.negative(tf.einsum('bin,bin->bi', fea_diff_in_batch, dist_in_batch_part_1))
 
         return AttrDict(locals())
 
