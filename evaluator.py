@@ -6,6 +6,7 @@ import tensorflow as tf
 from scipy.sparse import lil_matrix
 import toolz
 import numpy as np
+from tqdm import tqdm
 
 # based on anchor vectors
 class RecallEvaluator(object):
