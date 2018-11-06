@@ -283,7 +283,7 @@ class PUCML_Base():
 
         """ Evaluation Set-up """
         val_model = self.val_model
-        valid_users = np.random.choice(list(set(self.valid.nonzero()[0])), size=1000, replace=False)
+        valid_users = np.random.choice(list(set(self.valid.nonzero()[0])), size=100, replace=False)
         validation_recall = RecallEvaluator_knn(val_model, self.train, self.valid, self.test_batch_size)
 
         """ Config set-up """
@@ -299,7 +299,7 @@ class PUCML_Base():
             while True:
                 """ Evaluation recall@k """
                 valid_recalls = []
-                for user_chunk in toolz.partition_all(100, valid_users):
+                for user_chunk in toolz.partition_all(10, valid_users):
                     valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
                 print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
                 # TO DO: early stopping
