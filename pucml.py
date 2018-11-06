@@ -317,7 +317,7 @@ class PUCML_Base():
                         # print(sess.run(model.alpha_in_batch,feed_dict = {model.handle: train_handle}))
                         # print(sess.run([model.pnn_dist_sum,model.unn_dist_sum],feed_dict = {model.handle: train_handle}))
                         valid_recalls = []
-                        for user_chunk in toolz.partition_all(100, valid_users):
+                        for user_chunk in toolz.partition_all(10, valid_users):
                             valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
                         print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
                         print("Training loss {}".format(np.mean(losses)))
