@@ -202,6 +202,27 @@ class PUCML_Base():
         return AttrDict(locals())  # The magic line.
 
     # return scores for a couple of users
+    # def valuation_model(self):
+    #     score_user_ids = tf.placeholder(tf.int32, [None])
+    #
+    #     """ find associated metrices with users in score_user_ids """
+    #     alpha_in_batch = tf.gather(self.alpha,score_user_ids)
+    #     metrics_in_batch = tf.reduce_sum(tf.expand_dims(tf.expand_dims(alpha_in_batch,2),2) * self.base_matrices,
+    #                          axis=1)
+    #
+    #     """ create anchor vectors for each users """
+    #     user_postive_ind_map_in_batch = tf.gather(self.user_postive_ind_map,score_user_ids)
+    #     mask_fea_in_batch = tf.expand_dims(tf.cast(tf.sign(user_postive_ind_map_in_batch + 1),tf.float32),axis=2)
+    #     fea_in_batch = tf.gather(self.features,tf.nn.relu(user_postive_ind_map_in_batch))
+    #     anchor_vectors = tf.reduce_sum(mask_fea_in_batch * fea_in_batch,axis=1)/(tf.reduce_sum(mask_fea_in_batch,axis=1))
+    #
+    #     """ caculate distance to anchor_vectors """
+    #     fea_diff_in_batch = tf.expand_dims(anchor_vectors,axis=1) - self.features
+    #     dist_in_batch_part_1 = tf.einsum('bim,bmn->bin', fea_diff_in_batch, metrics_in_batch)
+    #     item_scores = tf.negative(tf.einsum('bin,bin->bi', fea_diff_in_batch, dist_in_batch_part_1))
+    #
+    #     return AttrDict(locals())
+
     def valuation_model(self):
         score_user_ids = tf.placeholder(tf.int32, [None])
 
@@ -214,12 +235,15 @@ class PUCML_Base():
         user_postive_ind_map_in_batch = tf.gather(self.user_postive_ind_map,score_user_ids)
         mask_fea_in_batch = tf.expand_dims(tf.cast(tf.sign(user_postive_ind_map_in_batch + 1),tf.float32),axis=2)
         fea_in_batch = tf.gather(self.features,tf.nn.relu(user_postive_ind_map_in_batch))
-        anchor_vectors = tf.reduce_sum(mask_fea_in_batch * fea_in_batch,axis=1)/(tf.reduce_sum(mask_fea_in_batch,axis=1))
 
         """ caculate distance to anchor_vectors """
-        fea_diff_in_batch = tf.expand_dims(anchor_vectors,axis=1) - self.features
-        dist_in_batch_part_1 = tf.einsum('bim,bmn->bin', fea_diff_in_batch, metrics_in_batch)
-        item_scores = tf.negative(tf.einsum('bin,bin->bi', fea_diff_in_batch, dist_in_batch_part_1))
+        fea_diff_in_batch = tf.expand_dims(fea_in_batch,axis=2) - self.features
+        with tf.Session() as sess:
+            sess.run(tf.global_variables_initializer())
+            print(sess.run(fea_diff_in_batch,feed_dict = {score_user_ids: np.array([1,2,3])}).shape)
+        return
+        # dist_in_batch_part_1 = tf.einsum('bim,bmn->bin', fea_diff_in_batch, metrics_in_batch)
+        # item_scores = tf.negative(tf.einsum('bin,bin->bi', fea_diff_in_batch, dist_in_batch_part_1))
 
         return AttrDict(locals())
 
@@ -248,7 +272,7 @@ class PUCML_Base():
                     valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
                 print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
                 # TO DO: early stopping
-
+                break
                 """ Trainning model"""
                 sess.run(model.train_iterator.initializer)
 
