@@ -82,12 +82,12 @@ class PUCML_Base():
         # generate alpha for all the users
         # self.pre_alpha = tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
         #                              stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32))
-        self.alpha = tf.exp(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
-                                        stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
+        # self.alpha = tf.exp(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
+        #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
         # self.alpha = tf.nn.softmax(self.pre_alpha)
         # self.alpha = tf.abs(self.pre_alpha)
-        # self.alpha = tf.abs(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
-        #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
+        self.alpha = tf.abs(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
+                                        stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
 
     def input_dataset_pipeline(self):
         dataset = tf.data.Dataset.from_tensor_slices(self.train_user_item_pairs)
@@ -222,12 +222,12 @@ class PUCML_Base():
                     _, loss = sess.run((model.selctive_opt, model.total_loss),
                                        feed_dict = {model.handle: train_handle})
                     losses.append(loss)
-                    if loop_idx%self.evaluation_loop_num == 0:
-                        valid_recalls = []
-                        for user_chunk in toolz.partition_all(10, valid_users):
-                            valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
-                        print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
-                        print("Training loss {}".format(np.mean(losses)))
+                    # if loop_idx%self.evaluation_loop_num == 0:
+                    #     valid_recalls = []
+                    #     for user_chunk in toolz.partition_all(10, valid_users):
+                    #         valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
+                    #     print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
+                    #     print("Training loss {}".format(np.mean(losses)))
                 print("\nTraining loss {}".format(np.mean(losses)))
 
 
