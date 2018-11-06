@@ -141,15 +141,15 @@ class PUCML_Base():
         fea_diff_in_batch = tf.expand_dims(anchor_vectors,axis=1) - fea_in_batch
 
         dist_in_batch_part_1 = tf.einsum('bim,bmn->bin', fea_diff_in_batch, metrics_in_batch)
-        item_scores = tf.negative(tf.einsum('bin,bin->bi', fea_diff_in_batch, dist_in_batch_part_1))
+        item_scores = tf.einsum('bin,bin->bi', fea_diff_in_batch, dist_in_batch_part_1)
 
         """ compute score functions """
         p_scores = item_scores[:,0]
         u_scores = item_scores[:,1:]
 
-        R_p_plus = tf.reduce_mean(-1*tf.log(1+p_scores))
-        R_p_minus = tf.reduce_mean(-1*tf.log(2-p_scores))
-        P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))
+        R_p_plus = tf.reduce_mean(-1*p_scores)
+        R_p_minus = tf.reduce_mean(p_scores)
+        P_u_minus = tf.reduce_mean(u_scores)
 
         """ define loss and optimization """
         # define two differnt losses and their optimizer
