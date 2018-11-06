@@ -80,14 +80,14 @@ class PUCML_Base():
         self.base_matrices = tf.matmul(tf.expand_dims(vi_vj,2),
                                        tf.expand_dims(vi_vj,1)) #(batch,emb_dim,emb_dim)
         # generate alpha for all the users
-        # self.pre_alpha = tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
-        #                              stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32))
+        self.pre_alpha = tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
+                                     stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32))
         # self.alpha = tf.exp(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
         #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
         # self.alpha = tf.nn.softmax(self.pre_alpha)
-        # self.alpha = tf.abs(self.pre_alpha)
-        self.alpha = tf.abs(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
-                                        stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
+        self.alpha = tf.abs(self.pre_alpha)
+        # self.alpha = tf.abs(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
+        #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
 
     def input_dataset_pipeline(self):
         dataset = tf.data.Dataset.from_tensor_slices(self.train_user_item_pairs)
@@ -153,7 +153,7 @@ class PUCML_Base():
 
         """ define loss and optimization """
         # define two differnt losses and their optimizer
-        total_loss = self.prior * R_p_plus + (P_u_minus - self.prior * R_p_minus) #+ tf.nn.l2_loss(self.pre_alpha)
+        total_loss = self.prior * R_p_plus + (P_u_minus - self.prior * R_p_minus) + tf.nn.l2_loss(self.pre_alpha)
         negative_loss = P_u_minus - self.prior * R_p_minus
 
         full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss)
