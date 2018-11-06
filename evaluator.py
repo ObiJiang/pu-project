@@ -97,7 +97,7 @@ class RecallEvaluator_knn(object):
 
         top_k_num = k + self.max_train_count
         user_tops = np.zeros((len(users),top_k_num))
-        for user_id,user in enumerate(users):
+        for user_id,user in enumerate(tqdm(users)):
             all_item_scores = np.zeros(self.n_items)
             for items_chunk in toolz.partition_all(self.test_batch_size, np.arange(self.n_items)):
                 items = list(items_chunk)
