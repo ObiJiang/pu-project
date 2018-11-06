@@ -240,7 +240,7 @@ class PUCML_Base():
         fea_diff_in_batch = tf.expand_dims(fea_in_batch,axis=2) - self.features
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
-            print(sess.run(fea_diff_in_batch,feed_dict = {score_user_ids: np.array([1,2,3])}).shape)
+            print(sess.run(fea_diff_in_batch,feed_dict = {score_user_ids: np.array([1])}).shape)
         return
         # dist_in_batch_part_1 = tf.einsum('bim,bmn->bin', fea_diff_in_batch, metrics_in_batch)
         # item_scores = tf.negative(tf.einsum('bin,bin->bi', fea_diff_in_batch, dist_in_batch_part_1))
