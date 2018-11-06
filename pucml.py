@@ -303,7 +303,7 @@ class PUCML_Base():
                     valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
                 print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
                 # TO DO: early stopping
-                break
+
                 """ Trainning model"""
                 sess.run(model.train_iterator.initializer)
 
