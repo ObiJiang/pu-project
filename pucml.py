@@ -1,6 +1,6 @@
 import numpy as np
 from misc import citeulike, split_data, AttrDict
-from evaluator import RecallEvaluator
+from evaluator import RecallEvaluator, RecallEvaluator_knn
 from scipy.sparse import lil_matrix
 import tensorflow as tf
 import toolz
@@ -22,6 +22,7 @@ class PUCML_Base():
         self.lr = config.lr
         self.k = config.k
         self.batch_size = config.batch_size
+        self.test_batch_size = config.test_batch_size # for testing only see validation for details
         self.n_unlabeled = config.n_unlabeled
         self.n_subsample_pairs = config.n_subsample_pairs
         self.evaluation_loop_num = config.evaluation_loop_num
@@ -199,6 +200,7 @@ class PUCML_Base():
         # tf.cond for different optimization
         # selctive_opt = tf.cond(negative_loss > self.beta, lambda: full_opt, lambda: neg_opt)
         selctive_opt = full_opt
+
         return AttrDict(locals())  # The magic line.
 
     # return scores for a couple of users
@@ -224,24 +226,24 @@ class PUCML_Base():
     #     return AttrDict(locals())
 
     def valuation_model(self):
-        p_u = tf.placeholder(tf.int32, [None,1])
+        u_i= tf.placeholder(tf.int32, [None,None])
 
-        """ find associated metrices with users in p_u """
-        alpha_in_batch = tf.gather(self.alpha,p_u[:,0])
+        """ find associated metrices with users in u_i """
+        alpha_in_batch = tf.gather(self.alpha,u_i[:,0])
         metrics_in_batch = tf.reduce_sum(tf.expand_dims(tf.expand_dims(alpha_in_batch,2),2) * self.base_matrices,
                              axis=1)
 
         """ compute distances """
-        fea_in_batch = tf.gather(self.features,p_u[:,1:])
+        fea_in_batch = tf.gather(self.features,u_i[:,1:])
         fea_diff_in_batch = tf.expand_dims(fea_in_batch,2) - self.features
         dist_in_batch_part_1 = tf.einsum('bijm,bmn->bijn', fea_diff_in_batch, metrics_in_batch)
         dist_in_batch = tf.negative(tf.einsum('bijn,bijn->bij', fea_diff_in_batch, dist_in_batch_part_1))
 
         """ compute nearest neighbors """
         lower_bound = tf.reduce_min(dist_in_batch)
-        user_postive_ind_map_in_batch = tf.gather(self.user_postive_ind_map,p_u[:,0])
+        user_postive_ind_map_in_batch = tf.gather(self.user_postive_ind_map,u_i[:,0])
 
-        user_index_in_batch = tf.tile(tf.expand_dims(tf.range(self.batch_size),axis=1),[1,self.max_n_p_elem])
+        user_index_in_batch = tf.tile(tf.expand_dims(tf.range(tf.shape(u_i)[0]),axis=1),[1,self.max_n_p_elem])
         user_item_postive_pair_ind_in_batch = tf.concat([tf.expand_dims(user_index_in_batch,axis=2),
                                                          tf.expand_dims(user_postive_ind_map_in_batch,axis=2)],axis=2)
         user_item_postive_pair_ind_in_batch_unroll = tf.reshape(user_item_postive_pair_ind_in_batch,[-1,2])
@@ -261,23 +263,18 @@ class PUCML_Base():
         pnn_dist_filter = tf.nn.relu(pnn_dist) # non-postive items will not be above 0
 
         nonnegative_indices = tf.tile(tf.expand_dims(tf.sign(user_postive_ind_map_in_batch + 1)[:,:self.k],axis=1),
-                                     [1,self.batch_size,1])
+                                     [1,tf.shape(u_i)[1]-1,1])
 
         pnn_dist_sum = tf.reduce_sum(pnn_dist_filter,axis=2) +\
                        tf.reduce_sum(tf.cast(nonnegative_indices,tf.float32)*lower_bound,axis=2)
 
         # compute unlabeled nn
-        unn_dist,_ = tf.nn.top_k(dist_in_batch + scatter,k=self.k+1)
+        unn_dist,_ = tf.nn.top_k(dist_in_batch + scatter,k=self.k)
         unn_dist_sum = tf.reduce_sum(unn_dist,axis=2)
 
         """ compute score functions """
         # confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
-        confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
-
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            print(sess.run(confidence_scores,feed_dict = {score_user_ids: np.array([1,1])}).shape)
-        return
+        item_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
 
         return AttrDict(locals())
 
@@ -287,7 +284,7 @@ class PUCML_Base():
         """ Evaluation Set-up """
         val_model = self.val_model
         valid_users = np.random.choice(list(set(self.valid.nonzero()[0])), size=1000, replace=False)
-        validation_recall = RecallEvaluator(val_model, self.train, self.valid)
+        validation_recall = RecallEvaluator_knn(val_model, self.train, self.valid, self.test_batch_size)
 
         """ Config set-up """
         configPro = tf.ConfigProto(allow_soft_placement=True)
@@ -417,6 +414,13 @@ if __name__ == '__main__':
         type     = int,
         default  = 1000,
         help     = 'batch size')
+
+    parser.add_argument('--test_batch_size',
+        action   = 'store',
+        required = False,
+        type     = int,
+        default  = 2,
+        help     = 'test batch size')
 
     parser.add_argument('--evaluation_loop_num',
         action   = 'store',
