@@ -153,7 +153,7 @@ class PUCML_Base():
 
         """ define loss and optimization """
         # define two differnt losses and their optimizer
-        total_loss = self.prior * R_p_plus + (P_u_minus - self.prior * R_p_minus) + tf.nn.l2_loss(self.pre_alpha)
+        total_loss = self.prior * R_p_plus + (P_u_minus - self.prior * R_p_minus) + 0.01*tf.nn.l2_loss(self.pre_alpha)
         negative_loss = P_u_minus - self.prior * R_p_minus
 
         full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss)
