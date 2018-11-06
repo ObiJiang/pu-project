@@ -97,7 +97,7 @@ class RecallEvaluator_knn(object):
 
         top_k_num = k + self.max_train_count
         user_tops = np.zeros((len(users),top_k_num))
-        for user in users:
+        for user_id,user in enumerate(users):
             all_item_scores = np.zeros(self.n_items)
             for items_chunk in toolz.partition_all(self.test_batch_size, np.arange(self.n_items)):
                 items = list(items_chunk)
@@ -105,7 +105,7 @@ class RecallEvaluator_knn(object):
                 cur_u_i = np.array([items])
                 item_scores = sess.run(self.model.item_scores,{self.model.u_i:cur_u_i})
                 all_item_scores[cur_u_i[0,1:]] = item_scores[0,:]
-                user_tops[user,:] = np.argpartition(all_item_scores, -top_k_num)[-top_k_num:]
+                user_tops[user_id,:] = np.argpartition(all_item_scores, -top_k_num)[-top_k_num:]
 
         recalls = []
         for user_id, tops in zip(users, user_tops):
