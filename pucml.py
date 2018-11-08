@@ -104,7 +104,7 @@ class PUCML_Base():
         #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
         # self.alpha = tf.nn.softmax(self.pre_alpha)
         self.alpha = tf.abs(self.pre_alpha)
-        self.alpha = tf.clip_by_norm(self.alpha, 1.1, axes=[1], name="alpha_projection")
+        self.alpha = tf.clip_by_norm(self.alpha, 1.1, axes=[1], name="alpha_projection")+1
         # self.alpha = tf.abs(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
         #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
 
@@ -284,7 +284,7 @@ class PUCML_Base():
                 for loop_idx in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
                     _, loss = sess.run((model.selctive_opt, model.total_loss),
                                        feed_dict = {model.handle: train_handle})
-                    print(sess.run([self.alpha,model.pnn_dist_sum,model.unn_dist_sum,model.p_scores],feed_dict = {model.handle: train_handle}))
+                    # print(sess.run([self.alpha,model.pnn_dist_sum,model.unn_dist_sum,model.p_scores],feed_dict = {model.handle: train_handle}))
                     losses.append(loss)
                     if loop_idx%self.evaluation_loop_num == 0:
                         # print(sess.run(model.alpha_in_batch,feed_dict = {model.handle: train_handle}))
