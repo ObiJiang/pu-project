@@ -182,7 +182,7 @@ class PUCML_Base():
         nonnegative_indices = tf.tile(tf.expand_dims(tf.sign(user_postive_ind_map_in_batch + 1)[:,:self.k+1],axis=1),
                                      [1,1+self.n_unlabeled,1])
         nonnegative_indices = tf.concat([nonnegative_indices[:,0:1,1:],nonnegative_indices[:,1:,:self.k]],axis=1)
-        pnn_dist_sum = tf.reduce_sum(pnn_dist_filter*nonnegative_indices,axis=2) +\
+        pnn_dist_sum = tf.reduce_sum(pnn_dist_filter*tf.cast(nonnegative_indices,tf.float32),axis=2) +\
                        tf.reduce_sum(tf.cast(nonnegative_indices,tf.float32)*lower_bound,axis=2)
 
         # compute unlabeled nn
