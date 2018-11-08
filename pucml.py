@@ -271,13 +271,13 @@ class PUCML_Base():
                 valid_recalls = []
                 for user_chunk in toolz.partition_all(100, valid_users):
                     valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
-                print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
+                print("Recall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
 
                 """ Evaluation recall@k """
                 train_recalls = []
                 for user_chunk in toolz.partition_all(100, train_users):
                     train_recalls.extend([train_recall.eval(sess, user_chunk)])
-                print("\nRecall on (sampled) validation set: {}".format(np.mean(train_recalls)))
+                print("Recall on (sampled) training set: {}".format(np.mean(train_recalls)))
 
                 # TO DO: early stopping
 
@@ -298,13 +298,13 @@ class PUCML_Base():
                         """ Evaluation recall@k """
                         for user_chunk in toolz.partition_all(10, valid_users):
                             valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
-                        print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
+                        print("Recall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
 
                         """ Evaluation recall@k """
                         train_recalls = []
                         for user_chunk in toolz.partition_all(100, train_users):
                             train_recalls.extend([train_recall.eval(sess, user_chunk)])
-                        print("\nRecall on (sampled) validation set: {}".format(np.mean(train_recalls)))
+                        print("Recall on (sampled) training set: {}".format(np.mean(train_recalls)))
 
                         print("Training loss {}".format(np.mean(losses)))
                 print("\nTraining loss {}".format(np.mean(losses)))
