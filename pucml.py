@@ -29,6 +29,8 @@ class PUCML_Base():
 
         # prior
         self.prior = self.prior_estimation()
+        self.prior_list_numpy = np.load('./prior_list.npy')
+        self.prior_list = tf.constant(self.prior_list_numpy)
 
         # dataset parameter
         self.n_users = config.n_users
@@ -95,8 +97,6 @@ class PUCML_Base():
         self.base_matrices = tf.matmul(tf.expand_dims(vi_vj,2),
                                        tf.expand_dims(vi_vj,1)) #(batch,emb_dim,emb_dim)
 
-        # self.base_matrices = tf.random_normal([self.n_subsample_pairs, self.emb_dim, self.emb_dim],
-        #                                 stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32)
         # generate alpha for all the users
         self.pre_alpha = tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
                                      stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32))
@@ -203,10 +203,10 @@ class PUCML_Base():
         # R_p_minus = tf.reduce_mean(1/(1 + tf.exp(-1*p_scores)))
         # P_u_minus = tf.reduce_mean(1/(1 + tf.exp(-1*u_scores)))
 
-
-        R_p_plus = tf.reduce_mean(-1*tf.log(1+p_scores))
+        prior_in_batch =  tf.gather(self.prior_list,p_u[:,0])
+        R_p_plus = tf.reduce_mean(-1*tf.log(1+p_scores))*prior_in_batch
         R_p_minus = tf.reduce_mean(-1*tf.log(2-p_scores))
-        P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))
+        P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))*prior_in_batch
 
         # R_p_plus = tf.reduce_mean(-1*pnn_dist_sum)
         # R_p_minus = tf.reduce_mean(pnn_dist_sum)
@@ -214,15 +214,16 @@ class PUCML_Base():
 
         """ define loss and optimization """
         # define two differnt losses and their optimizer
-        total_loss = self.prior * R_p_plus + (P_u_minus - self.prior * R_p_minus)+ tf.nn.l2_loss(self.alpha)# + self.feature_loss#
+        # total_loss = self.prior * R_p_plus + (P_u_minus - self.prior * R_p_minus)+ tf.nn.l2_loss(self.alpha)# + self.feature_loss#
+        total_loss =  R_p_plus + (P_u_minus - R_p_minus)
         negative_loss = P_u_minus - self.prior * R_p_minus
 
         full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss)
         neg_opt = tf.train.AdamOptimizer(learning_rate=self.lr*self.gamma).minimize(-1*negative_loss)
 
         # tf.cond for different optimization
-        selctive_opt = tf.cond(negative_loss > self.beta, lambda: full_opt, lambda: neg_opt)
-        # selctive_opt = full_opt
+        # selctive_opt = tf.cond(negative_loss > self.beta, lambda: full_opt, lambda: neg_opt)
+        selctive_opt = full_opt
 
         return AttrDict(locals())  # The magic line.
 
@@ -332,8 +333,8 @@ def main_algo(config):
     train, valid, test = split_data(user_item_matrix)
 
     # prior estimation
-    prior_estimation_data_matrix(train,fea,config.r_prior_sample)
-    return
+    #prior_estimation_data_matrix(train,fea,config.r_prior_sample)
+
     # add a few stuff to config
     config.n_users = n_users
     config.n_items = n_items
