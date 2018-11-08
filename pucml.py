@@ -205,8 +205,8 @@ class PUCML_Base():
 
         prior_in_batch =  tf.gather(self.prior_list,p_u[:,0])
         R_p_plus = tf.reduce_mean(-1*tf.log(1+p_scores))*prior_in_batch
-        R_p_minus = tf.reduce_mean(-1*tf.log(2-p_scores))
-        P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))*prior_in_batch
+        R_p_minus = tf.reduce_mean(-1*tf.log(2-p_scores))*prior_in_batch
+        P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))
 
         # R_p_plus = tf.reduce_mean(-1*pnn_dist_sum)
         # R_p_minus = tf.reduce_mean(pnn_dist_sum)
