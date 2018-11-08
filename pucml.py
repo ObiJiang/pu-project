@@ -71,20 +71,20 @@ class PUCML_Base():
         if features is not None:
             self.features = tf.constant(features, dtype=tf.float32)
             # add Projection
-            # self.hidden_layer_dim = 100
-            # self.emb_dim = 100
-            # self.clip_norm = 1.1
-            # mlp_layer_1 = tf.layers.dense(inputs=self.const_features, units=self.hidden_layer_dim,
-            #                               activation=tf.nn.relu, name="mlp_layer_1")
-            # dropout = tf.layers.dropout(inputs=mlp_layer_1, rate=0.2)
-            # mlp_layer_2 = tf.layers.dense(inputs=dropout, units=self.emb_dim, name="mlp_layer_2")
-            # output = mlp_layer_2
-            # self.feature_projection = tf.clip_by_norm(output, self.clip_norm, axes=[1], name="feature_projection")
-            # self.features = tf.Variable(tf.random_normal([self.n_items, self.emb_dim],
-            #                                 stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
-            #
-            # feature_distance = tf.reduce_sum(tf.squared_difference(self.features,self.feature_projection), 1)
-            # self.feature_loss = tf.reduce_sum(feature_distance, name="feature_loss")*0.1
+            self.hidden_layer_dim = 100
+            self.emb_dim = 100
+            self.clip_norm = 1.1
+            mlp_layer_1 = tf.layers.dense(inputs=self.const_features, units=self.hidden_layer_dim,
+                                          activation=tf.nn.relu, name="mlp_layer_1")
+            dropout = tf.layers.dropout(inputs=mlp_layer_1, rate=0.2)
+            mlp_layer_2 = tf.layers.dense(inputs=dropout, units=self.emb_dim, name="mlp_layer_2")
+            output = mlp_layer_2
+            self.feature_projection = tf.clip_by_norm(output, self.clip_norm, axes=[1], name="feature_projection")
+            self.features = tf.Variable(tf.random_normal([self.n_items, self.emb_dim],
+                                            stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
+
+            feature_distance = tf.reduce_sum(tf.squared_difference(self.features,self.feature_projection), 1)
+            self.feature_loss = tf.reduce_sum(feature_distance, name="feature_loss")*0.1
         else:
             self.emb_dim = 100
             self.features = tf.Variable(tf.random_normal([self.n_items, self.emb_dim],
@@ -100,13 +100,8 @@ class PUCML_Base():
         # generate alpha for all the users
         self.pre_alpha = tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
                                      stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32))
-        # self.alpha = tf.exp(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
-        #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
-        # self.alpha = tf.nn.softmax(self.pre_alpha)
         self.alpha = tf.abs(self.pre_alpha)
         self.alpha = tf.clip_by_norm(self.alpha, 1.1, axes=[1], name="alpha_projection")+1
-        # self.alpha = tf.abs(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
-        #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
 
     def input_dataset_pipeline(self):
         dataset = tf.data.Dataset.from_tensor_slices(self.train_user_item_pairs)
@@ -215,7 +210,7 @@ class PUCML_Base():
         """ define loss and optimization """
         # define two differnt losses and their optimizer
         # total_loss = self.prior * R_p_plus + (P_u_minus - self.prior * R_p_minus)+ tf.nn.l2_loss(self.alpha)# + self.feature_loss#
-        total_loss =  R_p_plus + (P_u_minus - R_p_minus)
+        total_loss =  R_p_plus + (P_u_minus - R_p_minus) + self.feature_loss
         negative_loss = P_u_minus - self.prior * R_p_minus
 
         full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss)
@@ -255,8 +250,10 @@ class PUCML_Base():
         """ Evaluation Set-up """
         val_model = self.val_model
         valid_users = np.random.choice(list(set(self.valid.nonzero()[0])), size=1000, replace=False)
+        train_users = np.random.choice(list(set(self.train.nonzero()[0])), size=1000, replace=False)
         # validation_recall = RecallEvaluator_knn(val_model, self.train, self.valid, self.test_batch_size)
         validation_recall = RecallEvaluator(val_model, self.train, self.valid)
+        train_recall = RecallEvaluator(val_model, None, self.train)
 
         """ Config set-up """
         configPro = tf.ConfigProto(allow_soft_placement=True)
@@ -275,6 +272,13 @@ class PUCML_Base():
                 for user_chunk in toolz.partition_all(100, valid_users):
                     valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
                 print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
+
+                """ Evaluation recall@k """
+                train_recalls = []
+                for user_chunk in toolz.partition_all(100, train_users):
+                    train_recalls.extend([train_recall.eval(sess, user_chunk)])
+                print("\nRecall on (sampled) validation set: {}".format(np.mean(train_recalls)))
+
                 # TO DO: early stopping
 
                 """ Trainning model"""
@@ -291,9 +295,17 @@ class PUCML_Base():
                         # print(sess.run(model.alpha_in_batch,feed_dict = {model.handle: train_handle}))
                         # print(sess.run([model.pnn_dist_sum,model.unn_dist_sum],feed_dict = {model.handle: train_handle}))
                         valid_recalls = []
+                        """ Evaluation recall@k """
                         for user_chunk in toolz.partition_all(10, valid_users):
                             valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
                         print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
+
+                        """ Evaluation recall@k """
+                        train_recalls = []
+                        for user_chunk in toolz.partition_all(100, train_users):
+                            train_recalls.extend([train_recall.eval(sess, user_chunk)])
+                        print("\nRecall on (sampled) validation set: {}".format(np.mean(train_recalls)))
+                        
                         print("Training loss {}".format(np.mean(losses)))
                 print("\nTraining loss {}".format(np.mean(losses)))
 
