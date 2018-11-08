@@ -144,8 +144,8 @@ def prior_estimation_data_matrix(train,features,r_prior_sample):
             prior = PEPriorEst_Per_User(xp,xu)
             priorList.append(prior)
 
+    np.save('./prior_list.npy',np.array(priorList))
     print("Prior (Sampled 1:{}) {}".format(r_prior_sample,np.mean(priorList)))
-
 
 if __name__ == '__main__':
     test_prior = 0.5 # biased
