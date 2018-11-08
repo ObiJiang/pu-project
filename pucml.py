@@ -66,24 +66,23 @@ class PUCML_Base():
     def create_varaibles(self,features):
         """ The following are variables used in the model (feature vectors and alpha) """
         # how feature vectors are generated
-
         if features is not None:
-            self.features = tf.constant(features, dtype=tf.float32)
+            self.const_features = tf.constant(features, dtype=tf.float32)
             # add Projection
-            # self.hidden_layer_dim = 100
-            # self.emb_dim = 100
-            # self.clip_norm = 1.1
-            # mlp_layer_1 = tf.layers.dense(inputs=self.const_features, units=self.hidden_layer_dim,
-            #                               activation=tf.nn.relu, name="mlp_layer_1")
-            # dropout = tf.layers.dropout(inputs=mlp_layer_1, rate=0.2)
-            # mlp_layer_2 = tf.layers.dense(inputs=dropout, units=self.emb_dim, name="mlp_layer_2")
-            # output = mlp_layer_2
-            # self.feature_projection = tf.clip_by_norm(output, self.clip_norm, axes=[1], name="feature_projection")
-            # self.features = tf.Variable(tf.random_normal([self.n_items, self.emb_dim],
-            #                                 stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
-            #
-            # feature_distance = tf.reduce_sum(tf.squared_difference(self.features,self.feature_projection), 1)
-            # self.feature_loss = tf.reduce_sum(feature_distance, name="feature_loss")*0.1
+            self.hidden_layer_dim = 100
+            self.emb_dim = 100
+            self.clip_norm = 1.1
+            mlp_layer_1 = tf.layers.dense(inputs=self.const_features, units=self.hidden_layer_dim,
+                                          activation=tf.nn.relu, name="mlp_layer_1")
+            dropout = tf.layers.dropout(inputs=mlp_layer_1, rate=0.2)
+            mlp_layer_2 = tf.layers.dense(inputs=dropout, units=self.emb_dim, name="mlp_layer_2")
+            output = mlp_layer_2
+            self.feature_projection = tf.clip_by_norm(output, self.clip_norm, axes=[1], name="feature_projection")
+            self.features = tf.Variable(tf.random_normal([self.n_items, self.emb_dim],
+                                            stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
+
+            feature_distance = tf.reduce_sum(tf.squared_difference(self.features,self.feature_projection), 1)
+            self.feature_loss = tf.reduce_sum(feature_distance, name="feature_loss")*0.1
         else:
             self.emb_dim = 100
             self.features = tf.Variable(tf.random_normal([self.n_items, self.emb_dim],
@@ -93,18 +92,18 @@ class PUCML_Base():
         vi = tf.constant(np.random.randint(0,self.n_items,size=(self.n_subsample_pairs)),dtype=tf.int32)
         vj = tf.constant(np.random.randint(0,self.n_items,size=(self.n_subsample_pairs)),dtype=tf.int32)
         vi_vj = tf.gather(self.features,vi) - tf.gather(self.features,vj)
-        # self.base_matrices = tf.matmul(tf.expand_dims(vi_vj,2),
-        #                                 tf.expand_dims(vi_vj,1)) #(batch,emb_dim,emb_dim)
+        self.base_matrices = tf.matmul(tf.expand_dims(vi_vj,2),
+                                       tf.expand_dims(vi_vj,1)) #(batch,emb_dim,emb_dim)
 
-        self.base_matrices = tf.random_normal([self.n_subsample_pairs, self.emb_dim, self.emb_dim],
-                                        stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32)
+        # self.base_matrices = tf.random_normal([self.n_subsample_pairs, self.emb_dim, self.emb_dim],
+        #                                 stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32)
         # generate alpha for all the users
         self.pre_alpha = tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
                                      stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32))
         # self.alpha = tf.exp(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
         #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
         # self.alpha = tf.nn.softmax(self.pre_alpha)
-        self.alpha = tf.abs(self.pre_alpha)
+        self.alpha = tf.exp(self.pre_alpha)
         # self.alpha = tf.abs(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
         #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
 
@@ -175,14 +174,14 @@ class PUCML_Base():
         scatter = tf.expand_dims(tf.scatter_nd(indices, updates, shape),axis=1)
 
         # compute postive nn
-        pnn_dist_filter,_ = tf.nn.top_k(dist_in_batch - scatter,k=self.k+1) # +1 because the output will include itself (0 distance)
-        #pnn_dist_filter = tf.nn.relu(pnn_dist) # non-postive items will not be above 0
+        pnn_dist,_ = tf.nn.top_k(dist_in_batch - scatter,k=self.k+1) # +1 because the output will include itself (0 distance)
+        pnn_dist_filter = tf.nn.relu(pnn_dist) # non-postive items will not be above 0
         pnn_dist_filter = tf.concat([pnn_dist_filter[:,0:1,1:],pnn_dist_filter[:,1:,:self.k]],axis=1)
 
         nonnegative_indices = tf.tile(tf.expand_dims(tf.sign(user_postive_ind_map_in_batch + 1)[:,:self.k+1],axis=1),
                                      [1,1+self.n_unlabeled,1])
         nonnegative_indices = tf.concat([nonnegative_indices[:,0:1,1:],nonnegative_indices[:,1:,:self.k]],axis=1)
-        pnn_dist_sum = tf.reduce_sum(pnn_dist_filter*tf.cast(nonnegative_indices,tf.float32),axis=2) +\
+        pnn_dist_sum = tf.reduce_sum(pnn_dist_filter,axis=2) +\
                        tf.reduce_sum(tf.cast(nonnegative_indices,tf.float32)*lower_bound,axis=2)
 
         # compute unlabeled nn
@@ -214,15 +213,15 @@ class PUCML_Base():
 
         """ define loss and optimization """
         # define two differnt losses and their optimizer
-        total_loss = self.prior * R_p_plus + (P_u_minus - self.prior * R_p_minus) #+ self.feature_loss#+ tf.nn.l2_loss(self.pre_alpha)
+        total_loss = self.prior * R_p_plus + (P_u_minus - self.prior * R_p_minus) + self.feature_loss#+ tf.nn.l2_loss(self.pre_alpha)
         negative_loss = P_u_minus - self.prior * R_p_minus
 
         full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss)
         neg_opt = tf.train.AdamOptimizer(learning_rate=self.lr*self.gamma).minimize(-1*negative_loss)
 
         # tf.cond for different optimization
-        # selctive_opt = tf.cond(negative_loss > self.beta, lambda: full_opt, lambda: neg_opt)
-        selctive_opt = full_opt
+        selctive_opt = tf.cond(negative_loss > self.beta, lambda: full_opt, lambda: neg_opt)
+        # selctive_opt = full_opt
 
         return AttrDict(locals())  # The magic line.
 
