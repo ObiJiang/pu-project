@@ -66,7 +66,7 @@ class PUCML_Base():
     def create_varaibles(self,features):
         """ The following are variables used in the model (feature vectors and alpha) """
         # how feature vectors are generated
-        self.emb_dim = 100
+
         if features is not None:
             self.features = tf.constant(features, dtype=tf.float32)
             # add Projection
@@ -85,6 +85,7 @@ class PUCML_Base():
             # feature_distance = tf.reduce_sum(tf.squared_difference(self.features,self.feature_projection), 1)
             # self.feature_loss = tf.reduce_sum(feature_distance, name="feature_loss")*0.1
         else:
+            self.emb_dim = 100
             self.features = tf.Variable(tf.random_normal([self.n_items, self.emb_dim],
                                             stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
 
@@ -93,7 +94,7 @@ class PUCML_Base():
         vj = tf.constant(np.random.randint(0,self.n_items,size=(self.n_subsample_pairs)),dtype=tf.int32)
         vi_vj = tf.gather(self.features,vi) - tf.gather(self.features,vj)
         # self.base_matrices = tf.matmul(tf.expand_dims(vi_vj,2),
-        #                                tf.expand_dims(vi_vj,1)) #(batch,emb_dim,emb_dim)
+        #                                 tf.expand_dims(vi_vj,1)) #(batch,emb_dim,emb_dim)
 
         self.base_matrices = tf.random_normal([self.n_subsample_pairs, self.emb_dim, self.emb_dim],
                                         stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32)
