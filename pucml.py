@@ -29,7 +29,7 @@ class PUCML_Base():
 
         # prior
         self.prior = self.prior_estimation()
-        self.prior_list_numpy = np.load('./prior_list.npy')
+        self.prior_list_numpy = np.load('./prior_list.npy').astype(np.float32)
         self.prior_list = tf.constant(self.prior_list_numpy)
 
         # dataset parameter
