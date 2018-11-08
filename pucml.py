@@ -185,21 +185,21 @@ class PUCML_Base():
         # P_u_minus = tf.reduce_mean(1/(1 + tf.exp(-1*u_scores)))
         #
         #
-        # R_p_plus = tf.reduce_mean(-1*tf.log(1+p_scores))
-        # R_p_minus = tf.reduce_mean(-1*tf.log(2-p_scores))
-        # P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))
+        R_p_plus = tf.reduce_mean(-1*tf.log(1+p_scores))
+        R_p_minus = tf.reduce_mean(-1*tf.log(2-p_scores))
+        P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))
 
-        R_p_plus = tf.reduce_mean(-1*pnn_dist_sum)
-        R_p_minus = tf.reduce_mean(pnn_dist_sum)
-        P_u_minus = tf.reduce_mean(unn_dist_sum)
+        # R_p_plus = tf.reduce_mean(-1*pnn_dist_sum)
+        # R_p_minus = tf.reduce_mean(pnn_dist_sum)
+        # P_u_minus = tf.reduce_mean(unn_dist_sum)
 
         """ define loss and optimization """
         # define two differnt losses and their optimizer
         total_loss = self.prior * R_p_plus + (P_u_minus - self.prior * R_p_minus) #+ tf.nn.l2_loss(self.pre_alpha)
         negative_loss = P_u_minus - self.prior * R_p_minus
 
-        full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss)
-        neg_opt = tf.train.AdamOptimizer(learning_rate=self.lr*self.gamma).minimize(-1*negative_loss)
+        full_opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(total_loss)
+        neg_opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr*self.gamma).minimize(-1*negative_loss)
 
         # tf.cond for different optimization
         # selctive_opt = tf.cond(negative_loss > self.beta, lambda: full_opt, lambda: neg_opt)
@@ -229,58 +229,6 @@ class PUCML_Base():
 
         return AttrDict(locals())
 
-    # def valuation_model(self):
-    #     u_i= tf.placeholder(tf.int32, [None,None])
-    #
-    #     """ find associated metrices with users in u_i """
-    #     alpha_in_batch = tf.gather(self.alpha,u_i[:,0])
-    #     metrics_in_batch = tf.reduce_sum(tf.expand_dims(tf.expand_dims(alpha_in_batch,2),2) * self.base_matrices,
-    #                          axis=1)
-    #
-    #     """ compute distances """
-    #     fea_in_batch = tf.gather(self.features,u_i[:,1:])
-    #     fea_diff_in_batch = tf.expand_dims(fea_in_batch,2) - self.features
-    #     dist_in_batch_part_1 = tf.einsum('bijm,bmn->bijn', fea_diff_in_batch, metrics_in_batch)
-    #     dist_in_batch = tf.negative(tf.einsum('bijn,bijn->bij', fea_diff_in_batch, dist_in_batch_part_1))
-    #
-    #     """ compute nearest neighbors """
-    #     lower_bound = tf.reduce_min(dist_in_batch)
-    #     user_postive_ind_map_in_batch = tf.gather(self.user_postive_ind_map,u_i[:,0])
-    #
-    #     user_index_in_batch = tf.tile(tf.expand_dims(tf.range(tf.shape(u_i)[0]),axis=1),[1,self.max_n_p_elem])
-    #     user_item_postive_pair_ind_in_batch = tf.concat([tf.expand_dims(user_index_in_batch,axis=2),
-    #                                                      tf.expand_dims(user_postive_ind_map_in_batch,axis=2)],axis=2)
-    #     user_item_postive_pair_ind_in_batch_unroll = tf.reshape(user_item_postive_pair_ind_in_batch,[-1,2])
-    #
-    #     # eliminate all the -1 at the end
-    #     nonzero_indices = tf.where((user_item_postive_pair_ind_in_batch_unroll[:,0]+1)*user_item_postive_pair_ind_in_batch_unroll[:,1]>=0)
-    #     nonzero_values = tf.gather_nd(user_item_postive_pair_ind_in_batch_unroll, nonzero_indices)
-    #
-    #     # create a big matrix where user-positve-item pairs have values of the lower bound
-    #     indices = nonzero_values
-    #     updates = tf.cast(tf.sign(nonzero_values[:,0]+1),tf.float32)*lower_bound
-    #     shape = tf.constant([self.batch_size, self.n_items])
-    #     scatter = tf.expand_dims(tf.scatter_nd(indices, updates, shape),axis=1)
-    #
-    #     # compute postive nn
-    #     pnn_dist,_ = tf.nn.top_k(dist_in_batch - scatter,k=self.k) # +1 because the output will include itself (0 distance)
-    #     pnn_dist_filter = tf.nn.relu(pnn_dist) # non-postive items will not be above 0
-    #
-    #     nonnegative_indices = tf.tile(tf.expand_dims(tf.sign(user_postive_ind_map_in_batch + 1)[:,:self.k],axis=1),
-    #                                  [1,tf.shape(u_i)[1]-1,1])
-    #
-    #     pnn_dist_sum = tf.reduce_sum(pnn_dist_filter,axis=2) +\
-    #                    tf.reduce_sum(tf.cast(nonnegative_indices,tf.float32)*lower_bound,axis=2)
-    #
-    #     # compute unlabeled nn
-    #     unn_dist,_ = tf.nn.top_k(dist_in_batch + scatter,k=self.k)
-    #     unn_dist_sum = tf.reduce_sum(unn_dist,axis=2)
-    #
-    #     """ compute score functions """
-    #     # confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
-    #     item_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
-    #
-    #     return AttrDict(locals())
 
     def train_main(self):
         model = self.model
@@ -318,14 +266,14 @@ class PUCML_Base():
                     _, loss = sess.run((model.selctive_opt, model.total_loss),
                                        feed_dict = {model.handle: train_handle})
                     losses.append(loss)
-                    # if loop_idx%self.evaluation_loop_num == 0:
-                    #     # print(sess.run(model.alpha_in_batch,feed_dict = {model.handle: train_handle}))
-                    #     # print(sess.run([model.pnn_dist_sum,model.unn_dist_sum],feed_dict = {model.handle: train_handle}))
-                    #     valid_recalls = []
-                    #     for user_chunk in toolz.partition_all(10, valid_users):
-                    #         valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
-                    #     print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
-                    #     print("Training loss {}".format(np.mean(losses)))
+                    if loop_idx%self.evaluation_loop_num == 0:
+                        # print(sess.run(model.alpha_in_batch,feed_dict = {model.handle: train_handle}))
+                        # print(sess.run([model.pnn_dist_sum,model.unn_dist_sum],feed_dict = {model.handle: train_handle}))
+                        valid_recalls = []
+                        for user_chunk in toolz.partition_all(10, valid_users):
+                            valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
+                        print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
+                        print("Training loss {}".format(np.mean(losses)))
                 print("\nTraining loss {}".format(np.mean(losses)))
 
 
