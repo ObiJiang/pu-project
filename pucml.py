@@ -76,7 +76,7 @@ class PUCML_Base():
                                           activation=tf.nn.relu, name="mlp_layer_1")
             dropout = tf.layers.dropout(inputs=mlp_layer_1, rate=0.2)
             mlp_layer_2 = tf.layers.dense(inputs=dropout, units=self.emb_dim, name="mlp_layer_2")
-            output = mlp_layer_2 * self.feature_projection_scaling_factor
+            output = mlp_layer_2
             self.features = tf.clip_by_norm(output, self.clip_norm, axes=[1], name="feature_projection")
         else:
             self.emb_dim = 100
