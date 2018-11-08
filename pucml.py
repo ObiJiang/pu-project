@@ -70,7 +70,7 @@ class PUCML_Base():
             self.const_features = tf.constant(features, dtype=tf.float32)
             # add Projection
             self.hidden_layer_dim = 100
-            self.emb_dim = 100
+            self.emb_dim = 30
             self.clip_norm = 1.1
             mlp_layer_1 = tf.layers.dense(inputs=self.const_features, units=self.hidden_layer_dim,
                                           activation=tf.nn.relu, name="mlp_layer_1")
