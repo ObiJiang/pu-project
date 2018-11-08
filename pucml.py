@@ -69,7 +69,7 @@ class PUCML_Base():
         """ The following are variables used in the model (feature vectors and alpha) """
         # how feature vectors are generated
         if features is not None:
-            self.features = tf.constant(features, dtype=tf.float32)
+            self.const_features = tf.constant(features, dtype=tf.float32)
             # add Projection
             self.hidden_layer_dim = 100
             self.emb_dim = 100
@@ -305,7 +305,7 @@ class PUCML_Base():
                         for user_chunk in toolz.partition_all(100, train_users):
                             train_recalls.extend([train_recall.eval(sess, user_chunk)])
                         print("\nRecall on (sampled) validation set: {}".format(np.mean(train_recalls)))
-                        
+
                         print("Training loss {}".format(np.mean(losses)))
                 print("\nTraining loss {}".format(np.mean(losses)))
 
