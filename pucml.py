@@ -66,6 +66,7 @@ class PUCML_Base():
     def create_varaibles(self,features):
         """ The following are variables used in the model (feature vectors and alpha) """
         # how feature vectors are generated
+        self.emb_dim = 100
         if features is not None:
             self.features = tf.constant(features, dtype=tf.float32)
             # add Projection
@@ -84,7 +85,6 @@ class PUCML_Base():
             # feature_distance = tf.reduce_sum(tf.squared_difference(self.features,self.feature_projection), 1)
             # self.feature_loss = tf.reduce_sum(feature_distance, name="feature_loss")*0.1
         else:
-            self.emb_dim = 100
             self.features = tf.Variable(tf.random_normal([self.n_items, self.emb_dim],
                                             stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
 
