@@ -127,13 +127,13 @@ class PUCML_Base():
         p_scores = confidence_scores[:,0]
         u_scores = confidence_scores[:,1:]
 
-        R_p_plus = tf.reduce_mean(1/(1 + tf.exp(p_scores)))
-        R_p_minus = tf.reduce_mean(1/(1 + tf.exp(-1*p_scores)))
-        P_u_minus = tf.reduce_mean(1/(1 + tf.exp(-1*u_scores)))
+        # R_p_plus = tf.reduce_mean(1/(1 + tf.exp(p_scores)))
+        # R_p_minus = tf.reduce_mean(1/(1 + tf.exp(-1*p_scores)))
+        # P_u_minus = tf.reduce_mean(1/(1 + tf.exp(-1*u_scores)))
 
-        # R_p_plus = tf.reduce_mean(-1*tf.log(1+p_scores))
-        # R_p_minus = tf.reduce_mean(-1*tf.log(2-p_scores))
-        # P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))
+        R_p_plus = tf.reduce_mean(-p_scores)
+        R_p_minus = tf.reduce_mean(p_scores)
+        P_u_minus = tf.reduce_mean(u_scores)
 
         # R_p_plus = tf.reduce_mean(-1*pnn_dist_sum)
         # R_p_minus = tf.reduce_mean(pnn_dist_sum)
