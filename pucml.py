@@ -67,7 +67,17 @@ class PUCML_Base():
         """ The following are variables used in the model (feature vectors and alpha) """
         # how feature vectors are generated
         if features is not None:
-            self.features = tf.constant(features, dtype=tf.float32)
+            self.const_features = tf.constant(features, dtype=tf.float32)
+            # add Projection
+            self.hidden_layer_dim = 100
+            self.emb_dim = 100
+            self.clip_norm = 1.1
+            mlp_layer_1 = tf.layers.dense(inputs=self.const_features, units=self.hidden_layer_dim,
+                                          activation=tf.nn.relu, name="mlp_layer_1")
+            dropout = tf.layers.dropout(inputs=mlp_layer_1, rate=0.2)
+            mlp_layer_2 = tf.layers.dense(inputs=dropout, units=self.emb_dim, name="mlp_layer_2")
+            output = mlp_layer_2 * self.feature_projection_scaling_factor
+            self.features = tf.clip_by_norm(output, self.clip_norm, axes=[1], name="feature_projection")
         else:
             self.emb_dim = 100
             self.features = tf.Variable(tf.random_normal([self.n_items, self.emb_dim],
@@ -198,8 +208,8 @@ class PUCML_Base():
         total_loss = self.prior * R_p_plus + (P_u_minus - self.prior * R_p_minus) #+ tf.nn.l2_loss(self.pre_alpha)
         negative_loss = P_u_minus - self.prior * R_p_minus
 
-        full_opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr).minimize(total_loss)
-        neg_opt = tf.train.GradientDescentOptimizer(learning_rate=self.lr*self.gamma).minimize(-1*negative_loss)
+        full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss)
+        neg_opt = tf.train.AdamOptimizer(learning_rate=self.lr*self.gamma).minimize(-1*negative_loss)
 
         # tf.cond for different optimization
         # selctive_opt = tf.cond(negative_loss > self.beta, lambda: full_opt, lambda: neg_opt)
@@ -228,7 +238,6 @@ class PUCML_Base():
         item_scores = tf.negative(tf.einsum('bin,bin->bi', fea_diff_in_batch, dist_in_batch_part_1))
 
         return AttrDict(locals())
-
 
     def train_main(self):
         model = self.model
