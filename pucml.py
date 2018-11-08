@@ -67,7 +67,7 @@ class PUCML_Base():
         """ The following are variables used in the model (feature vectors and alpha) """
         # how feature vectors are generated
         if features is not None:
-            self.const_features = tf.constant(features, dtype=tf.float32)
+            self.features = tf.constant(features, dtype=tf.float32)
             # add Projection
             # self.hidden_layer_dim = 100
             # self.emb_dim = 100
