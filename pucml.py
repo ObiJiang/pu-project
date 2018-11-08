@@ -67,22 +67,22 @@ class PUCML_Base():
         """ The following are variables used in the model (feature vectors and alpha) """
         # how feature vectors are generated
         if features is not None:
-            self.const_features = tf.constant(features, dtype=tf.float32)
+            self.features = tf.constant(features, dtype=tf.float32)
             # add Projection
-            self.hidden_layer_dim = 100
-            self.emb_dim = 100
-            self.clip_norm = 1.1
-            mlp_layer_1 = tf.layers.dense(inputs=self.const_features, units=self.hidden_layer_dim,
-                                          activation=tf.nn.relu, name="mlp_layer_1")
-            dropout = tf.layers.dropout(inputs=mlp_layer_1, rate=0.2)
-            mlp_layer_2 = tf.layers.dense(inputs=dropout, units=self.emb_dim, name="mlp_layer_2")
-            output = mlp_layer_2
-            self.feature_projection = tf.clip_by_norm(output, self.clip_norm, axes=[1], name="feature_projection")
-            self.features = tf.Variable(tf.random_normal([self.n_items, self.emb_dim],
-                                            stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
-
-            feature_distance = tf.reduce_sum(tf.squared_difference(self.features,self.feature_projection), 1)
-            self.feature_loss = tf.reduce_sum(feature_distance, name="feature_loss")*0.1
+            # self.hidden_layer_dim = 100
+            # self.emb_dim = 100
+            # self.clip_norm = 1.1
+            # mlp_layer_1 = tf.layers.dense(inputs=self.const_features, units=self.hidden_layer_dim,
+            #                               activation=tf.nn.relu, name="mlp_layer_1")
+            # dropout = tf.layers.dropout(inputs=mlp_layer_1, rate=0.2)
+            # mlp_layer_2 = tf.layers.dense(inputs=dropout, units=self.emb_dim, name="mlp_layer_2")
+            # output = mlp_layer_2
+            # self.feature_projection = tf.clip_by_norm(output, self.clip_norm, axes=[1], name="feature_projection")
+            # self.features = tf.Variable(tf.random_normal([self.n_items, self.emb_dim],
+            #                                 stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
+            #
+            # feature_distance = tf.reduce_sum(tf.squared_difference(self.features,self.feature_projection), 1)
+            # self.feature_loss = tf.reduce_sum(feature_distance, name="feature_loss")*0.1
         else:
             self.emb_dim = 100
             self.features = tf.Variable(tf.random_normal([self.n_items, self.emb_dim],
@@ -103,7 +103,7 @@ class PUCML_Base():
         # self.alpha = tf.exp(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
         #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
         # self.alpha = tf.nn.softmax(self.pre_alpha)
-        self.alpha = tf.exp(self.pre_alpha)
+        self.alpha = tf.abs(self.pre_alpha)
         # self.alpha = tf.abs(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
         #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
 
@@ -261,7 +261,7 @@ class PUCML_Base():
         configPro.gpu_options.allow_growth = True
 
         with tf.Session(config=configPro) as sess:
-            #sess = tf_debug.TensorBoardDebugWrapperSession(sess, '160.39.230.215:6064')
+            sess = tf_debug.TensorBoardDebugWrapperSession(sess, '128.59.176.64:6064')
             sess.run(tf.global_variables_initializer())
 
             train_handle = sess.run(model.train_iterator.string_handle())
