@@ -262,7 +262,7 @@ class PUCML_Base():
         configPro.gpu_options.allow_growth = True
 
         with tf.Session(config=configPro) as sess:
-            sess = tf_debug.TensorBoardDebugWrapperSession(sess, '128.59.176.64:6064')
+            #sess = tf_debug.TensorBoardDebugWrapperSession(sess,'128.59.176.64:6064')
             sess.run(tf.global_variables_initializer())
 
             train_handle = sess.run(model.train_iterator.string_handle())
@@ -283,6 +283,7 @@ class PUCML_Base():
                 for loop_idx in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
                     _, loss = sess.run((model.selctive_opt, model.total_loss),
                                        feed_dict = {model.handle: train_handle})
+                    print(sess.run(p_scores,feed_dict = {model.handle: train_handle}))
                     losses.append(loss)
                     if loop_idx%self.evaluation_loop_num == 0:
                         # print(sess.run(model.alpha_in_batch,feed_dict = {model.handle: train_handle}))
