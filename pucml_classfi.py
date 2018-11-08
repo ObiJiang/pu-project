@@ -235,14 +235,14 @@ def main_algo(config):
         fea = pca_projected_fea/(pca_projected_fea.shape[1])
         print(np.max(fea))
         print(np.min(fea))
-        # prior estimation
-        prior_estimation_data_matrix(train,fea,config.r_prior_sample)
-        return
     else:
         fea = None
 
     # get train/valid/test user-item matrices
     train, valid, test = split_data(user_item_matrix)
+
+    # prior estimation
+    prior_estimation_data_matrix(train,fea,config.r_prior_sample)
 
     # add a few stuff to config
     config.n_users = n_users
