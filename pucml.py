@@ -104,6 +104,7 @@ class PUCML_Base():
         #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
         # self.alpha = tf.nn.softmax(self.pre_alpha)
         self.alpha = tf.abs(self.pre_alpha)
+        self.alpha = tf.clip_by_norm(self.alpha, 1.1, axes=[1], name="alpha_projection")
         # self.alpha = tf.abs(tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
         #                                 stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32)))
 
