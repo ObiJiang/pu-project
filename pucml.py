@@ -253,7 +253,7 @@ class PUCML_Base():
         train_users = np.random.choice(list(set(self.train.nonzero()[0])), size=1000, replace=False)
         # validation_recall = RecallEvaluator_knn(val_model, self.train, self.valid, self.test_batch_size)
         validation_recall = RecallEvaluator(val_model, self.train, self.valid)
-        train_recall = RecallEvaluator(val_model, None, self.train)
+        train_recall = RecallEvaluator(val_model, self.valid, self.train)
 
         """ Config set-up """
         configPro = tf.ConfigProto(allow_soft_placement=True)

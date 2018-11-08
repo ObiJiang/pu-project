@@ -21,11 +21,11 @@ class RecallEvaluator(object):
         self.model = model
         self.train_user_item_matrix = lil_matrix(train_user_item_matrix)
         self.test_user_item_matrix = lil_matrix(test_user_item_matrix)
-        n_users = test_user_item_matrix.shape[0]
+        n_users = train_user_item_matrix.shape[0]
         self.user_to_test_set = {u: set(self.test_user_item_matrix.rows[u])
                                  for u in range(n_users) if self.test_user_item_matrix.rows[u]}
 
-        if train_user_item_matrix is not None:
+        if self.train_user_item_matrix is not None:
             self.user_to_train_set = {u: set(self.train_user_item_matrix.rows[u])
                                       for u in range(n_users) if self.train_user_item_matrix.rows[u]}
             self.max_train_count = max(len(row) for row in self.train_user_item_matrix.rows)
