@@ -190,8 +190,8 @@ class PUCML_Base():
         unn_dist_sum = tf.reduce_sum(unn_dist,axis=2)
 
         """ compute score functions """
-        confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
-        # confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
+        # confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
+        confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
         #confidence_scores = tf.log(pnn_dist_sum)-tf.log(pnn_dist_sum+unn_dist_sum) # log version
 
         p_scores = confidence_scores[:,0]
@@ -201,8 +201,8 @@ class PUCML_Base():
         # R_p_plus = tf.reduce_mean(1/(1 + tf.exp(p_scores)))
         # R_p_minus = tf.reduce_mean(1/(1 + tf.exp(-1*p_scores)))
         # P_u_minus = tf.reduce_mean(1/(1 + tf.exp(-1*u_scores)))
-        #
-        #
+
+
         R_p_plus = tf.reduce_mean(-1*tf.log(1+p_scores))
         R_p_minus = tf.reduce_mean(-1*tf.log(2-p_scores))
         P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))
@@ -283,14 +283,14 @@ class PUCML_Base():
                     _, loss = sess.run((model.selctive_opt, model.total_loss),
                                        feed_dict = {model.handle: train_handle})
                     losses.append(loss)
-                    if loop_idx%self.evaluation_loop_num == 0:
-                        # print(sess.run(model.alpha_in_batch,feed_dict = {model.handle: train_handle}))
-                        # print(sess.run([model.pnn_dist_sum,model.unn_dist_sum],feed_dict = {model.handle: train_handle}))
-                        valid_recalls = []
-                        for user_chunk in toolz.partition_all(10, valid_users):
-                            valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
-                        print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
-                        print("Training loss {}".format(np.mean(losses)))
+                    # if loop_idx%self.evaluation_loop_num == 0:
+                    #     # print(sess.run(model.alpha_in_batch,feed_dict = {model.handle: train_handle}))
+                    #     # print(sess.run([model.pnn_dist_sum,model.unn_dist_sum],feed_dict = {model.handle: train_handle}))
+                    #     valid_recalls = []
+                    #     for user_chunk in toolz.partition_all(10, valid_users):
+                    #         valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
+                    #     print("\nRecall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
+                    #     print("Training loss {}".format(np.mean(losses)))
                 print("\nTraining loss {}".format(np.mean(losses)))
 
 
