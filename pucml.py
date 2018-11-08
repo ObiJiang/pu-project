@@ -283,7 +283,7 @@ class PUCML_Base():
                 for loop_idx in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
                     _, loss = sess.run((model.selctive_opt, model.total_loss),
                                        feed_dict = {model.handle: train_handle})
-                    print(sess.run(p_scores,feed_dict = {model.handle: train_handle}))
+                    print(sess.run(model.p_scores,feed_dict = {model.handle: train_handle}))
                     losses.append(loss)
                     if loop_idx%self.evaluation_loop_num == 0:
                         # print(sess.run(model.alpha_in_batch,feed_dict = {model.handle: train_handle}))
