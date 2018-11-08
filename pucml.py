@@ -175,14 +175,14 @@ class PUCML_Base():
         scatter = tf.expand_dims(tf.scatter_nd(indices, updates, shape),axis=1)
 
         # compute postive nn
-        pnn_dist,_ = tf.nn.top_k(dist_in_batch - scatter,k=self.k+1) # +1 because the output will include itself (0 distance)
-        pnn_dist_filter = tf.nn.relu(pnn_dist) # non-postive items will not be above 0
+        pnn_dist_filter,_ = tf.nn.top_k(dist_in_batch - scatter,k=self.k+1) # +1 because the output will include itself (0 distance)
+        #pnn_dist_filter = tf.nn.relu(pnn_dist) # non-postive items will not be above 0
         pnn_dist_filter = tf.concat([pnn_dist_filter[:,0:1,1:],pnn_dist_filter[:,1:,:self.k]],axis=1)
 
         nonnegative_indices = tf.tile(tf.expand_dims(tf.sign(user_postive_ind_map_in_batch + 1)[:,:self.k+1],axis=1),
                                      [1,1+self.n_unlabeled,1])
         nonnegative_indices = tf.concat([nonnegative_indices[:,0:1,1:],nonnegative_indices[:,1:,:self.k]],axis=1)
-        pnn_dist_sum = tf.reduce_sum(pnn_dist_filter,axis=2) +\
+        pnn_dist_sum = tf.reduce_sum(pnn_dist_filter*nonnegative_indices,axis=2) +\
                        tf.reduce_sum(tf.cast(nonnegative_indices,tf.float32)*lower_bound,axis=2)
 
         # compute unlabeled nn
@@ -191,8 +191,8 @@ class PUCML_Base():
         unn_dist_sum = tf.reduce_sum(unn_dist,axis=2)
 
         """ compute score functions """
-        # confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
-        confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
+        confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
+        # confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
         #confidence_scores = tf.log(pnn_dist_sum)-tf.log(pnn_dist_sum+unn_dist_sum) # log version
 
         p_scores = confidence_scores[:,0]
