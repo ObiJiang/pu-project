@@ -194,9 +194,9 @@ class PUCML_Base():
         u_scores = confidence_scores[:,1:]
 
         prior_in_batch =  tf.gather(self.prior_list,p_u[:,0])
-        R_p_plus = tf.reduce_mean(1/(1 + tf.exp(p_scores)))*prior_in_batch
-        R_p_minus = tf.reduce_mean(1/(1 + tf.exp(-1*p_scores)))*prior_in_batch
-        P_u_minus = tf.reduce_mean(1/(1 + tf.exp(-1*u_scores)))
+        R_p_plus = tf.reduce_mean(1/(1 + tf.exp(-1*p_scores)))*prior_in_batch
+        R_p_minus = tf.reduce_mean(1/(1 + tf.exp(p_scores)))*prior_in_batch
+        P_u_minus = tf.reduce_mean(1/(1 + tf.exp(u_scores)))
 
 
         # R_p_plus = tf.reduce_mean(-1*tf.log(1+p_scores))*prior_in_batch
