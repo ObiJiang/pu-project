@@ -220,6 +220,9 @@ class PUCML_Base():
         # selctive_opt = tf.cond(negative_loss > self.beta, lambda: full_opt, lambda: neg_opt)
         selctive_opt = full_opt
 
+        update_features = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss,var_list=[self.features])
+        update_alpha = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss,var_list=[self.alpha])
+
         return AttrDict(locals())  # The magic line.
 
     # return scores for a couple of users
@@ -287,8 +290,16 @@ class PUCML_Base():
                 losses = []
 
                 for loop_idx in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
-                    _, loss = sess.run((model.selctive_opt, model.total_loss),
-                                       feed_dict = {model.handle: train_handle})
+                    # _, loss = sess.run((model.selctive_opt, model.total_loss),
+                    #                    feed_dict = {model.handle: train_handle})
+                    if loop_idx % 2 == 0:
+                        print('updating feautures...')
+                        _, loss = sess.run((model.update_features, model.total_loss),
+                                           feed_dict = {model.handle: train_handle})
+                    else:
+                        print('updating alpha...')
+                        _, loss = sess.run((model.update_features, model.total_loss),
+                                           feed_dict = {model.handle: train_handle})
                     # print(sess.run([self.alpha,model.pnn_dist_sum,model.unn_dist_sum,model.p_scores],feed_dict = {model.handle: train_handle}))
                     losses.append(loss)
                     if loop_idx%self.evaluation_loop_num == 0:
