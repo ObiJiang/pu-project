@@ -221,7 +221,7 @@ class PUCML_Base():
         selctive_opt = full_opt
 
         update_features = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss,var_list=[self.features])
-        update_alpha = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss,var_list=[self.alpha])
+        update_alpha = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss,var_list=[self.pre_alpha])
 
         return AttrDict(locals())  # The magic line.
 
@@ -298,7 +298,7 @@ class PUCML_Base():
                                            feed_dict = {model.handle: train_handle})
                     else:
                         print('updating alpha...')
-                        _, loss = sess.run((model.update_features, model.total_loss),
+                        _, loss = sess.run((model.update_alpha, model.total_loss),
                                            feed_dict = {model.handle: train_handle})
                     # print(sess.run([self.alpha,model.pnn_dist_sum,model.unn_dist_sum,model.p_scores],feed_dict = {model.handle: train_handle}))
                     losses.append(loss)
