@@ -293,11 +293,9 @@ class PUCML_Base():
                     # _, loss = sess.run((model.selctive_opt, model.total_loss),
                     #                    feed_dict = {model.handle: train_handle})
                     if loop_idx % 2 == 0:
-                        print('updating feautures...')
                         _, loss = sess.run((model.update_features, model.total_loss),
                                            feed_dict = {model.handle: train_handle})
                     else:
-                        print('updating alpha...')
                         _, loss = sess.run((model.update_alpha, model.total_loss),
                                            feed_dict = {model.handle: train_handle})
                     # print(sess.run([self.alpha,model.pnn_dist_sum,model.unn_dist_sum,model.p_scores],feed_dict = {model.handle: train_handle}))
