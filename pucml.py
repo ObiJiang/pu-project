@@ -213,7 +213,7 @@ class PUCML_Base():
         total_loss =  R_p_plus + (P_u_minus - R_p_minus) # + self.feature_loss
         negative_loss = P_u_minus - self.prior * R_p_minus
 
-        full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(pnn_dist_sum)
+        full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(-1*pnn_dist_sum)
         neg_opt = tf.train.AdamOptimizer(learning_rate=self.lr*self.gamma).minimize(-1*negative_loss)
 
         # tf.cond for different optimization
