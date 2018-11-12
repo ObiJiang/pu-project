@@ -213,7 +213,7 @@ class PUCML_Base():
         total_loss =  R_p_plus + (P_u_minus - R_p_minus) # + self.feature_loss
         negative_loss = P_u_minus - self.prior * R_p_minus
 
-        full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss)
+        full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(pnn_dist_sum)
         neg_opt = tf.train.AdamOptimizer(learning_rate=self.lr*self.gamma).minimize(-1*negative_loss)
 
         # tf.cond for different optimization
@@ -290,11 +290,11 @@ class PUCML_Base():
                 losses = []
 
                 for loop_idx in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
-                    # _, loss = sess.run((model.selctive_opt, model.total_loss),
-                    #                    feed_dict = {model.handle: train_handle})
-                    _, _, loss = sess.run((model.update_features,model.update_alpha, model.total_loss),
+                    _, loss = sess.run((model.selctive_opt, model.total_loss),
                                        feed_dict = {model.handle: train_handle})
-                    # if loop_idx % 2 == 0:
+                    # _, _, loss = sess.run((model.update_features,model.update_alpha, model.total_loss),
+                    #                    feed_dict = {model.handle: train_handle})
+                    # # if loop_idx % 2 == 0:
                     #     _, loss = sess.run((model.update_features, model.total_loss),
                     #                        feed_dict = {model.handle: train_handle})
                     # else:
