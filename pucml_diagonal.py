@@ -216,9 +216,9 @@ class PUCML_Base():
         score_user_ids = tf.placeholder(tf.int32, [None])
 
         """ find associated metrices with users in score_user_ids """
-        alpha_in_batch = tf.gather(self.alpha,score_user_ids)
-        metrics_in_batch = tf.reduce_sum(tf.expand_dims(tf.expand_dims(alpha_in_batch,2),2) * self.base_matrices,
-                             axis=1)
+        alpha_in_batch = tf.gather(self.alpha,p_u[:,0])
+        metrics_in_batch = tf.linalg.diag(alpha_in_batch)
+
 
         """ create anchor vectors for each users """
         user_postive_ind_map_in_batch = tf.gather(self.user_postive_ind_map,score_user_ids)
