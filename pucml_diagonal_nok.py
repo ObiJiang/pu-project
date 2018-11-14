@@ -29,8 +29,8 @@ class PUCML_Base():
 
         # prior
         self.prior = self.prior_estimation()
-        #self.prior_list_numpy = np.load('./prior_list.npy').astype(np.float32)
-        #self.prior_list = tf.constant(self.prior_list_numpy)
+        self.prior_list_numpy = np.load('./prior_list.npy').astype(np.float32)
+        self.prior_list = tf.constant(self.prior_list_numpy)
 
         # dataset parameter
         self.n_users = config.n_users
@@ -140,43 +140,38 @@ class PUCML_Base():
         dist_in_batch = tf.negative(tf.einsum('bijn,bijn->bij', fea_diff_in_batch_pos, dist_in_batch_part_1))
 
         user_item_bool = tf.cast(tf.expand_dims(tf.sign(user_postive_ind_map_in_batch + 1),axis=1),tf.float32)
-        pnn_dist_sum = tf.reduce_sum(dist_in_batch*user_item_bool,axis=1)
+        pnn_dist_sum = tf.reduce_sum(dist_in_batch*user_item_bool,axis=2)
 
         """ compute sum of negative distances """
-        fea_in_batch = tf.gather(self.features,p_u[:,1:])
-        user_postive_ind_map_in_batch = tf.gather(self.user_postive_ind_map,p_u[:,0])
-        postive_dist = tf.gather(self.features,tf.nn.relu(user_postive_ind_map_in_batch))
-        fea_diff_in_batch_pos = tf.expand_dims(fea_in_batch,2) - tf.expand_dims(postive_dist,1)
+        unlabled_samples = tf.random_uniform([tf.shape(fea_diff_in_batch_pos)[0],tf.shape(fea_diff_in_batch_pos)[1],tf.shape(fea_diff_in_batch_pos)[2]],minval=0,maxval=self.n_items,dtype=tf.int32)
 
-        dist_in_batch_part_1 = tf.einsum('bijm,bmn->bijn', fea_diff_in_batch_pos, metrics_in_batch)
-        dist_in_batch = tf.negative(tf.einsum('bijn,bijn->bij', fea_diff_in_batch_pos, dist_in_batch_part_1))
+        unlabeled_dist = tf.gather(self.features,unlabled_samples)
+        fea_diff_in_batch_un = tf.expand_dims(fea_in_batch,2) - unlabeled_dist
 
-        user_item_bool = tf.cast(tf.expand_dims(tf.sign(user_postive_ind_map_in_batch + 1),axis=1),tf.float32)
-        unn_dist_sum = tf.reduce_sum(dist_in_batch*user_item_bool,axis=1)
+        dist_in_batch_part_un_1 = tf.einsum('bijm,bmn->bijn', fea_diff_in_batch_un, metrics_in_batch)
+        dist_in_batch_un = tf.negative(tf.einsum('bijn,bijn->bij', fea_diff_in_batch_un, dist_in_batch_part_un_1))
+
+        unn_dist_sum = tf.reduce_sum(dist_in_batch_un*user_item_bool,axis=2)
 
         with tf.Session() as sess:
             sess.run(tf.global_variables_initializer())
             train_handle = sess.run(train_iterator.string_handle())
             sess.run(train_iterator.initializer)
-            print(sess.run(pnn_dist_sum, feed_dict = {handle: train_handle}).shape)
+            print(sess.run(pnn_dist_sum, feed_dict = {handle: train_handle}))
+            print(sess.run(unn_dist_sum, feed_dict = {handle: train_handle}))
 
         """ compute score functions """
-        # confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
-        confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
+        confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
         #confidence_scores = tf.log(pnn_dist_sum)-tf.log(pnn_dist_sum+unn_dist_sum) # log version
 
         p_scores = confidence_scores[:,0]
         u_scores = confidence_scores[:,1:]
 
-        #prior_in_batch =  tf.gather(self.prior_list,p_u[:,0])
+        prior_in_batch =  tf.gather(self.prior_list,p_u[:,0])
 
-        R_p_plus = tf.reduce_mean(-1*tf.log(1+p_scores))*0.2
-        R_p_minus = tf.reduce_mean(-1*tf.log(2-p_scores))*0.2
+        R_p_plus = tf.reduce_mean(-1*tf.log(1+p_scores))*prior_in_batch
+        R_p_minus = tf.reduce_mean(-1*tf.log(2-p_scores))*prior_in_batch
         P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))
-
-        # R_p_plus = tf.reduce_mean(-1*pnn_dist_sum)
-        # R_p_minus = tf.reduce_mean(pnn_dist_sum)
-        # P_u_minus = tf.reduce_mean(unn_dist_sum)
 
         """ define loss and optimization """
         # define two differnt losses and their optimizer
