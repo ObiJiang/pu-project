@@ -153,13 +153,6 @@ class PUCML_Base():
 
         unn_dist_sum = tf.reduce_sum(dist_in_batch_un*user_item_bool,axis=2)
 
-        with tf.Session() as sess:
-            sess.run(tf.global_variables_initializer())
-            train_handle = sess.run(train_iterator.string_handle())
-            sess.run(train_iterator.initializer)
-            print(sess.run(pnn_dist_sum, feed_dict = {handle: train_handle}))
-            print(sess.run(unn_dist_sum, feed_dict = {handle: train_handle}))
-
         """ compute score functions """
         confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
         #confidence_scores = tf.log(pnn_dist_sum)-tf.log(pnn_dist_sum+unn_dist_sum) # log version
