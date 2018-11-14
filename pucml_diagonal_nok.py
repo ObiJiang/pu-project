@@ -154,7 +154,8 @@ class PUCML_Base():
         unn_dist_sum = tf.reduce_sum(dist_in_batch_un*user_item_bool,axis=2)
 
         """ compute score functions """
-        confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
+        #confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
+        confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
         #confidence_scores = tf.log(pnn_dist_sum)-tf.log(pnn_dist_sum+unn_dist_sum) # log version
 
         p_scores = confidence_scores[:,0]
@@ -162,9 +163,9 @@ class PUCML_Base():
 
         prior_in_batch =  tf.gather(self.prior_list,p_u[:,0])
 
-        R_p_plus = tf.reduce_mean(-1*tf.log(1+p_scores))*prior_in_batch
-        R_p_minus = tf.reduce_mean(-1*tf.log(2-p_scores))*prior_in_batch
-        P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))
+        R_p_plus = tf.reduce_mean(tf.log(1+p_scores))*prior_in_batch
+        R_p_minus = tf.reduce_mean(tf.log(2-p_scores))*prior_in_batch
+        P_u_minus = tf.reduce_mean(tf.log(2-u_scores))
 
         """ define loss and optimization """
         # define two differnt losses and their optimizer
