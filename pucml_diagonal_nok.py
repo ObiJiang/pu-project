@@ -181,8 +181,8 @@ class PUCML_Base():
         # selctive_opt = tf.cond(negative_loss > self.beta, lambda: full_opt, lambda: neg_opt)
         selctive_opt = full_opt
 
-        update_features = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss,var_list=[self.features])
-        update_alpha = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss,var_list=[self.pre_alpha])
+        # update_features = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss,var_list=[self.features])
+        # update_alpha = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss,var_list=[self.pre_alpha])
 
         return AttrDict(locals())  # The magic line.
 
