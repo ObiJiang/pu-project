@@ -163,7 +163,7 @@ class PUCML_Base():
 
         prior_in_batch =  tf.gather(self.prior_list,p_u[:,0])
 
-        R_p_plus = tf.reduce_mean(tf.log(1+p_scores))*prior_in_batch
+        R_p_plus = tf.reduce_mean(tf.log(1+p_scores))
         R_p_minus = tf.reduce_mean(tf.log(2-p_scores))*prior_in_batch
         P_u_minus = tf.reduce_mean(tf.log(2-u_scores))
 
@@ -173,7 +173,7 @@ class PUCML_Base():
         total_loss =  R_p_plus + (P_u_minus - R_p_minus) # + self.feature_loss
         negative_loss = P_u_minus - self.prior * R_p_minus
 
-        full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(p_scores+u_scores)
+        full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(R_p_plus+P_u_minus)
         neg_opt = tf.train.AdamOptimizer(learning_rate=self.lr*self.gamma).minimize(-1*negative_loss)
 
         # tf.cond for different optimization
