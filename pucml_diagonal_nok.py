@@ -141,7 +141,7 @@ class PUCML_Base():
         dist_in_batch = tf.negative(tf.einsum('bijn,bijn->bij', fea_diff_in_batch_pos, dist_in_batch_part_1))
 
         user_item_bool = tf.cast(tf.expand_dims(tf.sign(user_postive_ind_map_in_batch + 1),axis=1),tf.float32)
-        pnn_dist_sum = tf.reduce_sum(dist_in_batch*user_item_bool,axis=2)
+        pnn_dist_sum = tf.reduce_sum(dist_in_batch*user_item_bool,axis=2)/tf.reduce_sum(user_item_bool,axis=2)
 
         """ compute sum of negative distances """
         unlabled_samples = tf.random_uniform([tf.shape(fea_diff_in_batch_pos)[0],tf.shape(fea_diff_in_batch_pos)[1],tf.shape(fea_diff_in_batch_pos)[2]],minval=0,maxval=self.n_items,dtype=tf.int32)
@@ -152,11 +152,11 @@ class PUCML_Base():
         dist_in_batch_part_un_1 = tf.einsum('bijm,bmn->bijn', fea_diff_in_batch_un, metrics_in_batch)
         dist_in_batch_un = tf.negative(tf.einsum('bijn,bijn->bij', fea_diff_in_batch_un, dist_in_batch_part_un_1))
 
-        unn_dist_sum = tf.reduce_sum(dist_in_batch_un*user_item_bool,axis=2)
+        unn_dist_sum = tf.reduce_sum(dist_in_batch_un*user_item_bool,axis=2)/tf.reduce_sum(user_item_bool,axis=2)
 
         """ compute score functions """
-        #confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
-        confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
+        confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
+        #confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
         #confidence_scores = tf.log(pnn_dist_sum)-tf.log(pnn_dist_sum+unn_dist_sum) # log version
 
         p_scores = confidence_scores[:,0]
@@ -164,9 +164,9 @@ class PUCML_Base():
 
         # prior_in_batch =  tf.gather(self.prior_list,p_u[:,0])
 
-        R_p_plus = tf.reduce_mean(tf.log(1+p_scores))#
+        R_p_plus = tf.reduce_mean(-1*tf.log(1+p_scores))#
         R_p_minus = tf.reduce_mean(tf.log(2-p_scores))#
-        P_u_minus = tf.reduce_mean(tf.log(2-u_scores))
+        P_u_minus = tf.reduce_mean(-1*tf.log(2-u_scores))
 
         """ define loss and optimization """
         # define two differnt losses and their optimizer
