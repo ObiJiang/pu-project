@@ -97,6 +97,7 @@ class PUCML_Base():
         dataset = dataset.shuffle(buffer_size=10000)
         dataset = dataset.batch(self.batch_size)
         dataset = dataset.prefetch(1)
+        dataset = dataset.repeat()
         iterator = dataset.make_initializable_iterator()
         return iterator,dataset
 
@@ -226,6 +227,7 @@ class PUCML_Base():
             sess.run(tf.global_variables_initializer())
 
             train_handle = sess.run(model.train_iterator.string_handle())
+            sess.run(model.train_iterator.initializer)
 
             while True:
                 """ Evaluation recall@k """
@@ -243,8 +245,6 @@ class PUCML_Base():
                 # TO DO: early stopping
 
                 """ Trainning model"""
-                sess.run(model.train_iterator.initializer)
-
                 losses = []
 
                 for loop_idx in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
