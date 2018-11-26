@@ -71,6 +71,7 @@ class PUCML_Base():
         """ The following are variables used in the model (feature vectors and alpha) """
         # how feature vectors are generated
         if features is not None:
+            self.emb_dim = features.shape[1]
             self.features = tf.constant(features, dtype=tf.float32)
         else:
             self.emb_dim = 30
@@ -86,7 +87,7 @@ class PUCML_Base():
 
         # generate alpha for all the users
         self.pre_alpha = tf.Variable(tf.random_normal([self.n_users, self.emb_dim],
-                                     stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32))
+                                     stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
         self.alpha = tf.abs(self.pre_alpha)
         self.alpha = tf.clip_by_norm(self.alpha, 1.1, axes=[1], name="alpha_projection")+1
 
@@ -111,12 +112,7 @@ class PUCML_Base():
 
     def prior_estimation(self):
         # placeholder value 0.5
-        return self.prior
-
-    def _find_positive_nn(self,dist_users):
-        dist,users = dist_users
-        postivie_item_dist = self.train_user_to_positive_set[users]
-        return postivie_item_dist,0
+        return 0.5
 
     def model(self):
         train_iterator,train_dataset = self.input_dataset_pipeline()
@@ -135,6 +131,22 @@ class PUCML_Base():
         fea_diff_in_batch = tf.expand_dims(fea_in_batch,2) - self.features
         dist_in_batch_part_1 = tf.einsum('bijm,bmn->bijn', fea_diff_in_batch, metrics_in_batch)
         dist_in_batch = tf.negative(tf.einsum('bijn,bijn->bij', fea_diff_in_batch, dist_in_batch_part_1))
+        dist_in_batch_shape = tf.shape(dist_in_batch)
+
+        top_dist,indices= tf.nn.top_k(dist_in_batch,k=self.k+1)
+        total_nn_sum = tf.reduce_sum(top_dist,axis=2)
+
+        # create index for gather_nd
+        first_index = tf.tile(tf.expand_dims(tf.expand_dims(tf.range(self.batch_size),axis=1),axis=2),
+                        [1,tf.shape(indices)[1],tf.shape(indices)[2]])
+
+        second_index = tf.tile(tf.expand_dims(tf.expand_dims(tf.range(tf.shape(indices)[1]),axis=0),axis=2),
+                        [tf.shape(indices)[0],1,tf.shape(indices)[2]])
+
+        cat_idx = tf.concat([tf.expand_dims(first_index,axis=3),
+                             tf.expand_dims(second_index,axis=3),
+                             tf.expand_dims(indices,axis=3)], axis=3)
+
 
         """ compute nearest neighbors """
         lower_bound = tf.reduce_min(dist_in_batch)
@@ -145,6 +157,7 @@ class PUCML_Base():
         user_item_postive_pair_ind_in_batch = tf.concat([tf.expand_dims(user_index_in_batch,axis=2),
                                                          tf.expand_dims(user_postive_ind_map_in_batch,axis=2)],axis=2)
         user_item_postive_pair_ind_in_batch_unroll = tf.reshape(user_item_postive_pair_ind_in_batch,[-1,2])
+
         # eliminate all the -1 at the end
         nonzero_indices = tf.where((user_item_postive_pair_ind_in_batch_unroll[:,0]+1)*user_item_postive_pair_ind_in_batch_unroll[:,1]>=0)
         nonzero_values = tf.gather_nd(user_item_postive_pair_ind_in_batch_unroll, nonzero_indices)
@@ -155,44 +168,27 @@ class PUCML_Base():
         shape = tf.constant([self.batch_size, self.n_items])
         scatter = tf.expand_dims(tf.scatter_nd(indices, updates, shape),axis=1)
 
-        # compute postive nn
-        pnn_dist,_ = tf.nn.top_k(dist_in_batch - scatter,k=self.k+1) # +1 because the output will include itself (0 distance)
-        pnn_dist_filter = tf.nn.relu(pnn_dist) # non-postive items will not be above 0
-        pnn_dist_filter = tf.concat([pnn_dist_filter[:,0:1,1:],pnn_dist_filter[:,1:,:self.k]],axis=1)
+        postive_only_dist = tf.nn.relu(dist_in_batch - scatter) #unlabeled data will be 0
+        postive_dist_and_zeros = tf.gather_nd(postive_only_dist,cat_idx)
+        total_p_sum = tf.reduce_sum(postive_dist_and_zeros,axis=2)
 
-        nonnegative_indices = tf.tile(tf.expand_dims(tf.sign(user_postive_ind_map_in_batch + 1)[:,:self.k+1],axis=1),
-                                     [1,1+self.n_unlabeled,1])
-        nonnegative_indices = tf.concat([nonnegative_indices[:,0:1,1:],nonnegative_indices[:,1:,:self.k]],axis=1)
-        pnn_dist_sum = tf.reduce_sum(pnn_dist_filter,axis=2) +\
-                       tf.reduce_sum(tf.cast(nonnegative_indices,tf.float32)*lower_bound,axis=2)
-        pnn_dist_sum = pnn_dist_sum/self.k
-
-        # compute unlabeled nn
-        unn_dist,_ = tf.nn.top_k(dist_in_batch + scatter,k=self.k+1)
-        unn_dist = tf.concat([unn_dist[:,0:1,:self.k],unn_dist[:,1:,1:]],axis=1)
-        unn_dist_sum = tf.reduce_sum(unn_dist,axis=2)/self.k
+        # with tf.Session() as sess:
+        #     sess.run(tf.global_variables_initializer())
+        #     train_handle = sess.run(train_iterator.string_handle())
+        #     sess.run(train_iterator.initializer)
+        #     print(sess.run((total_nn_sum,total_p_sum),
+        #                        feed_dict = {handle: train_handle}))
 
         """ compute score functions """
-        confidence_scores = tf.exp(pnn_dist_sum)/(tf.exp(pnn_dist_sum)+tf.exp(unn_dist_sum))
-        # confidence_scores = pnn_dist_sum/(pnn_dist_sum+unn_dist_sum) # linear version
-        #confidence_scores = tf.log(pnn_dist_sum)-tf.log(pnn_dist_sum+unn_dist_sum) # log version
+        confidence_scores = tf.exp(total_p_sum)/(tf.exp(total_p_sum)+tf.exp(total_nn_sum-total_p_sum))
 
         p_scores = confidence_scores[:,0]
         u_scores = confidence_scores[:,1:]
-
-        #prior_in_batch =  tf.gather(self.prior_list,p_u[:,0])
-        # R_p_plus = tf.reduce_mean(1/(1 + tf.exp(p_scores)))*prior_in_batch
-        # R_p_minus = tf.reduce_mean(1/(1 + tf.exp(-1*p_scores)))*prior_in_batch
-        # P_u_minus = tf.reduce_mean(1/(1 + tf.exp(-1*u_scores)))
 
 
         R_p_plus = tf.reduce_mean(-1*tf.log(0.001+p_scores))#
         R_p_minus = tf.reduce_mean(-1*tf.log(0.001+1-p_scores))#
         P_u_minus = tf.reduce_mean(-1*tf.log(0.001+1-u_scores))
-
-        # R_p_plus = tf.reduce_mean(-1*pnn_dist_sum)
-        # R_p_minus = tf.reduce_mean(pnn_dist_sum)
-        # P_u_minus = tf.reduce_mean(unn_dist_sum)
 
         """ define loss and optimization """
         # define two differnt losses and their optimizer
