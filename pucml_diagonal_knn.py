@@ -13,6 +13,8 @@ from tensorflow.python import debug as tf_debug
 from sklearn.preprocessing import StandardScaler
 from sklearn.decomposition import PCA
 
+# This version will implement pure knn
+
 class PUCML_Base():
     def __init__(self,config,features=None,train=None,valid=None,test=None):
         # hyper-parameter
