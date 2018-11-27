@@ -175,6 +175,7 @@ class PUCML_Base():
     # return scores for a couple of users
     def valuation_model(self):
         score_user_ids = tf.placeholder(tf.int32, [None])
+        k = tf.placeholder(tf.int32,[None])
 
         """ find associated metrices with users in score_user_ids """
         alpha_in_batch = tf.gather(self.alpha,score_user_ids)
@@ -192,6 +193,7 @@ class PUCML_Base():
         dist_in_batch_part_1 = tf.einsum('bim,bmn->bin', fea_diff_in_batch, metrics_in_batch)
         item_scores = tf.negative(tf.einsum('bin,bin->bi', fea_diff_in_batch, dist_in_batch_part_1))
 
+        top_k = tf.nn.top_k(item_scores, k)
         return AttrDict(locals())
 
     def train_main(self):
@@ -210,7 +212,7 @@ class PUCML_Base():
         configPro.gpu_options.allow_growth = True
 
         sess = tf.Session(config=configPro)
-        sess.run(tf.global_variables_initializer())
+        sess.run(self.init)
 
         train_handle = sess.run(model.train_iterator.string_handle())
         epoch_idx = 0
