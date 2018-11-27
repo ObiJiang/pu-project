@@ -89,7 +89,7 @@ class PUCML_Base():
         self.pre_alpha = tf.Variable(tf.random_normal([self.n_users, self.emb_dim],
                                      stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
         self.alpha = tf.abs(self.pre_alpha)
-        self.alpha = tf.clip_by_norm(self.alpha, 1.1, axes=[1], name="alpha_projection")+1
+        #self.alpha = tf.clip_by_norm(self.alpha, 1.1, axes=[1], name="alpha_projection")+1
 
     def input_dataset_pipeline(self):
         dataset = tf.data.Dataset.from_tensor_slices(self.train_user_item_pairs)
@@ -196,7 +196,7 @@ class PUCML_Base():
         total_loss =  R_p_plus + (P_u_minus - R_p_minus) # + self.feature_loss
         negative_loss = P_u_minus - self.prior * R_p_minus
 
-        full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(R_p_plus+P_u_minus)
+        full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(R_p_plus+P_u_minus+tf.nn.l2_loss(self.alpha))
         neg_opt = tf.train.AdamOptimizer(learning_rate=self.lr*self.gamma).minimize(-1*negative_loss)
 
         # tf.cond for different optimization
