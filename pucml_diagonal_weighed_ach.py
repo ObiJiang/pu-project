@@ -117,6 +117,7 @@ class PUCML_Base():
         return 0.5
 
     def model(self):
+        tf.set_random_seed(1)
         train_iterator,train_dataset = self.input_dataset_pipeline()
 
         handle = tf.placeholder(tf.string, shape=[],name='dataset_handle')
@@ -206,39 +207,38 @@ class PUCML_Base():
         configPro = tf.ConfigProto(allow_soft_placement=True)
         configPro.gpu_options.allow_growth = True
 
-        with tf.Session(config=configPro) as sess:
-            sess.run(tf.global_variables_initializer())
+        sess = tf.Session(config=configPro)
+        sess.run(tf.global_variables_initializer())
 
-            train_handle = sess.run(model.train_iterator.string_handle())
-            epoch_idx = 0
-            while True:
+        train_handle = sess.run(model.train_iterator.string_handle())
+        epoch_idx = 0
+        while True:
+            # TO DO: early stopping
+            """ Trainning model"""
+            sess.run(model.train_iterator.initializer)
 
-                # TO DO: early stopping
-                """ Trainning model"""
-                sess.run(model.train_iterator.initializer)
+            losses = []
 
-                losses = []
+            for loop_idx in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
+                _, loss = sess.run((model.selctive_opt, model.total_loss),
+                                   feed_dict = {model.handle: train_handle})
 
-                for loop_idx in tqdm(range(int(self.total_num_user_item/self.batch_size)), desc="Optimizing..."):
-                    _, loss = sess.run((model.selctive_opt, model.total_loss),
-                                       feed_dict = {model.handle: train_handle})
+                losses.append(loss)
+                # print("\nTraining loss {}".format(np.mean(losses)))
 
-                    losses.append(loss)
-                    # print("\nTraining loss {}".format(np.mean(losses)))
+            if epoch_idx%self.evaluation_loop_num == 0:
+                """ Evaluation recall@k """
+                valid_recalls = []
+                for user_chunk in toolz.partition_all(10, valid_users):
+                    valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
+                print("Recall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
 
-                if epoch_idx%self.evaluation_loop_num == 0:
-                    """ Evaluation recall@k """
-                    valid_recalls = []
-                    for user_chunk in toolz.partition_all(10, valid_users):
-                        valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
-                    print("Recall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
-
-                    """ Evaluation recall@k """
-                    train_recalls = []
-                    for user_chunk in toolz.partition_all(100, train_users):
-                        train_recalls.extend([train_recall.eval(sess, user_chunk)])
-                    print("Recall on (sampled) training set: {}".format(np.mean(train_recalls)))
-                epoch_idx += 1
+                """ Evaluation recall@k """
+                train_recalls = []
+                for user_chunk in toolz.partition_all(100, train_users):
+                    train_recalls.extend([train_recall.eval(sess, user_chunk)])
+                print("Recall on (sampled) training set: {}".format(np.mean(train_recalls)))
+            epoch_idx += 1
 
 
 def main_algo(config):
