@@ -249,7 +249,7 @@ class PUCML_Base():
         configPro.gpu_options.allow_growth = True
 
         with tf.Session(config=configPro) as sess:
-            sess.run(tf.global_variables_initializer())
+            sess.run(self.init)
 
             train_handle = sess.run(model.train_iterator.string_handle())
 
