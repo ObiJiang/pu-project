@@ -210,7 +210,7 @@ class PUCML_Base():
             sess.run(tf.global_variables_initializer())
 
             train_handle = sess.run(model.train_iterator.string_handle())
-
+            epoch_idx = 0
             while True:
                 """ Evaluation recall@k """
                 valid_recalls = []
@@ -235,21 +235,21 @@ class PUCML_Base():
                                        feed_dict = {model.handle: train_handle})
 
                     losses.append(loss)
-                    if loop_idx%self.evaluation_loop_num == 0:
-                        valid_recalls = []
-                        """ Evaluation recall@k """
-                        for user_chunk in toolz.partition_all(10, valid_users):
-                            valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
-                        print("Recall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
+                    print("\nTraining loss {}".format(np.mean(losses)))
 
-                        """ Evaluation recall@k """
-                        train_recalls = []
-                        for user_chunk in toolz.partition_all(100, train_users):
-                            train_recalls.extend([train_recall.eval(sess, user_chunk)])
-                        print("Recall on (sampled) training set: {}".format(np.mean(train_recalls)))
+                if epoch_idx%self.evaluation_loop_num == 0:
+                    """ Evaluation recall@k """
+                    valid_recalls = []
+                    for user_chunk in toolz.partition_all(10, valid_users):
+                        valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
+                    print("Recall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
 
-                        print("Training loss {}".format(np.mean(losses)))
-                print("\nTraining loss {}".format(np.mean(losses)))
+                    """ Evaluation recall@k """
+                    train_recalls = []
+                    for user_chunk in toolz.partition_all(100, train_users):
+                        train_recalls.extend([train_recall.eval(sess, user_chunk)])
+                    print("Recall on (sampled) training set: {}".format(np.mean(train_recalls)))
+                epoch_idx += 1
 
 
 def main_algo(config):
