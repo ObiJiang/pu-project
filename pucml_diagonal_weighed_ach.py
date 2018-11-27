@@ -66,6 +66,7 @@ class PUCML_Base():
         self.create_varaibles(features)
         self.model = self.model()
         self.val_model = self.valuation_model()
+        self.init = tf.global_variables_initializer()
         tf.get_default_graph().finalize()
 
     def create_varaibles(self,features):
