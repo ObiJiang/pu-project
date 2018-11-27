@@ -149,9 +149,9 @@ class PUCML_Base():
         p_scores = confidence_scores[:,0]
         u_scores = confidence_scores[:,1:]
 
-
-        R_p_plus = tf.reduce_mean(-1*tf.log(0.001+p_scores))#
-        R_p_minus = tf.reduce_mean(-1*tf.log(0.001+1-p_scores))#
+        prior_in_batch =  tf.gather(self.prior_list,p_u[:,0])
+        R_p_plus = tf.reduce_mean(-1*tf.log(0.001+p_scores))*prior_in_batch
+        R_p_minus = tf.reduce_mean(-1*tf.log(0.001+1-p_scores))*prior_in_batch
         P_u_minus = tf.reduce_mean(-1*tf.log(0.001+1-u_scores))
 
         """ define loss and optimization """
@@ -160,7 +160,7 @@ class PUCML_Base():
         total_loss =  R_p_plus + (P_u_minus - R_p_minus) # + self.feature_loss
         negative_loss = P_u_minus - self.prior * R_p_minus
 
-        full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(R_p_plus+0.2*P_u_minus)
+        full_opt = tf.train.AdamOptimizer(learning_rate=self.lr).minimize(total_loss)
         neg_opt = tf.train.AdamOptimizer(learning_rate=self.lr*self.gamma).minimize(-1*negative_loss)
 
         # tf.cond for different optimization
