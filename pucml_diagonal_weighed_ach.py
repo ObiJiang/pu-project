@@ -175,7 +175,7 @@ class PUCML_Base():
     # return scores for a couple of users
     def valuation_model(self):
         score_user_ids = tf.placeholder(tf.int32, [None])
-        k = tf.placeholder(tf.int32,[None])
+        k = tf.placeholder(tf.int32)
 
         """ find associated metrices with users in score_user_ids """
         alpha_in_batch = tf.gather(self.alpha,score_user_ids)
