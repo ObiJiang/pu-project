@@ -235,7 +235,7 @@ class PUCML_Base():
                                        feed_dict = {model.handle: train_handle})
 
                     losses.append(loss)
-                    print("\nTraining loss {}".format(np.mean(losses)))
+                    # print("\nTraining loss {}".format(np.mean(losses)))
 
                 if epoch_idx%self.evaluation_loop_num == 0:
                     """ Evaluation recall@k """
