@@ -74,7 +74,7 @@ class PUCML_Base():
             self.emb_dim = features.shape[1]
             self.features = tf.constant(features, dtype=tf.float32)
         else:
-            self.emb_dim = 30
+            self.emb_dim = 100
             self.features = tf.Variable(tf.random_normal([self.n_items, self.emb_dim],
                                             stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
 
