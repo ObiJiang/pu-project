@@ -212,17 +212,6 @@ class PUCML_Base():
             train_handle = sess.run(model.train_iterator.string_handle())
             epoch_idx = 0
             while True:
-                """ Evaluation recall@k """
-                valid_recalls = []
-                for user_chunk in toolz.partition_all(100, valid_users):
-                    valid_recalls.extend([validation_recall.eval(sess, user_chunk)])
-                print("Recall on (sampled) validation set: {}".format(np.mean(valid_recalls)))
-
-                """ Evaluation recall@k """
-                train_recalls = []
-                for user_chunk in toolz.partition_all(100, train_users):
-                    train_recalls.extend([train_recall.eval(sess, user_chunk)])
-                print("Recall on (sampled) training set: {}".format(np.mean(train_recalls)))
 
                 # TO DO: early stopping
                 """ Trainning model"""
