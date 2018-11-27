@@ -42,7 +42,7 @@ class RecallEvaluator(object):
         # compute the top (K +  Max Number Of Training Items for any user) items for each user
 
         _, user_tops = sess.run(self.model.top_k,
-                                {self.model.score_user_ids: users,self.model.k:np.array([k + self.max_train_count])})
+                                {self.model.score_user_ids: users,self.model.k:k + self.max_train_count})
         recalls = []
         for user_id, tops in zip(users, user_tops):
             train_set = self.user_to_train_set.get(user_id, set())
