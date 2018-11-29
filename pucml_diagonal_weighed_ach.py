@@ -81,16 +81,20 @@ class PUCML_Base():
                                             stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
 
         # subsample base item pairs. It is extremly rare that two items would be the same. If it is the same, it's not a big deal
-        # vi = tf.constant(np.random.randint(0,self.n_items,size=(self.n_subsample_pairs)),dtype=tf.int32)
-        # vj = tf.constant(np.random.randint(0,self.n_items,size=(self.n_subsample_pairs)),dtype=tf.int32)
-        # vi_vj = tf.gather(self.features,vi) - tf.gather(self.features,vj)
-        # self.base_matrices = tf.matmul(tf.expand_dims(vi_vj,2),
-        #                                tf.expand_dims(vi_vj,1)) #(batch,emb_dim,emb_dim)
+        vi = tf.constant(np.random.randint(0,self.n_items,size=(self.n_subsample_pairs)),dtype=tf.int32)
+        vj = tf.constant(np.random.randint(0,self.n_items,size=(self.n_subsample_pairs)),dtype=tf.int32)
+        vi_vj = tf.gather(self.features,vi) - tf.gather(self.features,vj)
+        self.base_matrices = tf.matmul(tf.expand_dims(vi_vj,2),
+                                       tf.expand_dims(vi_vj,1)) #(batch,emb_dim,emb_dim)
+
+        self.pre_alpha = tf.Variable(tf.random_normal([self.n_users, self.n_subsample_pairs],
+                                     stddev=1 / (self.n_subsample_pairs ** 0.5), dtype=tf.float32))
+        self.alpha = tf.abs(self.pre_alpha)
 
         # generate alpha for all the users
-        self.pre_alpha = tf.Variable(tf.random_normal([self.n_users, self.emb_dim],
-                                     stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
-        self.alpha = tf.abs(self.pre_alpha)
+        # self.pre_alpha = tf.Variable(tf.random_normal([self.n_users, self.emb_dim],
+        #                              stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
+        # self.alpha = tf.abs(self.pre_alpha)
 
         self.beta = tf.Variable(tf.random_normal([self.n_users, self.max_n_p_elem],
                                      stddev=1 / (self.emb_dim ** 0.5), dtype=tf.float32))
@@ -130,7 +134,9 @@ class PUCML_Base():
         """ find associated metrices with users in p_u """
         alpha_in_batch = tf.gather(self.alpha,p_u[:,0])
         beta_in_batch = tf.gather(self.beta,p_u[:,0])
-        metrics_in_batch = tf.linalg.diag(alpha_in_batch)
+        #metrics_in_batch = tf.linalg.diag(alpha_in_batch)
+        metrics_in_batch = tf.reduce_sum(tf.expand_dims(tf.expand_dims(alpha_in_batch,2),2) * self.base_matrices,
+                             axis=1)
 
         """ create anchor vectors for each users """
         user_postive_ind_map_in_batch = tf.gather(self.user_postive_ind_map,p_u[:,0])
@@ -179,7 +185,9 @@ class PUCML_Base():
 
         """ find associated metrices with users in score_user_ids """
         alpha_in_batch = tf.gather(self.alpha,score_user_ids)
-        metrics_in_batch = tf.linalg.diag(alpha_in_batch)
+        #metrics_in_batch = tf.linalg.diag(alpha_in_batch)
+        metrics_in_batch = tf.reduce_sum(tf.expand_dims(tf.expand_dims(alpha_in_batch,2),2) * self.base_matrices,
+                             axis=1)
         beta_in_batch = tf.gather(self.beta,score_user_ids)
 
         """ create anchor vectors for each users """
