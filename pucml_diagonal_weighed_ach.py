@@ -159,8 +159,8 @@ class PUCML_Base():
         u_scores = confidence_scores[:,1:]
 
         prior_in_batch =  tf.gather(self.prior_list,p_u[:,0])
-        R_p_plus = tf.reduce_mean(-1*tf.log(0.001+p_scores))*prior_in_batch
-        R_p_minus = tf.reduce_mean(-1*tf.log(0.001+1-p_scores))*prior_in_batch
+        R_p_plus = tf.reduce_mean(-1*tf.log(0.001+p_scores)*prior_in_batch)
+        R_p_minus = tf.reduce_mean(-1*tf.log(0.001+1-p_scores)*prior_in_batch)
         P_u_minus = tf.reduce_mean(-1*tf.log(0.001+1-u_scores))
 
         """ define loss and optimization """
